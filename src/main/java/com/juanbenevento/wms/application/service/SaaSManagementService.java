@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.application.service;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.TenantMapper;
 import com.juanbenevento.wms.application.ports.in.command.OnboardCompanyCommand;
 import com.juanbenevento.wms.application.ports.in.dto.TenantResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageSaaSUseCase;
@@ -25,7 +25,7 @@ public class SaaSManagementService implements ManageSaaSUseCase {
     private final TenantRepositoryPort tenantRepository;
     private final UserRepositoryPort userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final WmsMapper mapper;
+    private final TenantMapper mapper;
 
     @Override
     @Transactional(readOnly = true)

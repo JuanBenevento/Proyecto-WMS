@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.application.service;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.UserMapper;
 import com.juanbenevento.wms.application.ports.in.command.CreateUserCommand; // <--- Nuevo
 import com.juanbenevento.wms.application.ports.in.dto.UserResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageUserUseCase;
@@ -23,7 +23,7 @@ public class UserService implements ManageUserUseCase {
 
     private final UserRepositoryPort userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final WmsMapper mapper;
+    private final UserMapper mapper;
 
     @Override
     @Transactional(readOnly = true)

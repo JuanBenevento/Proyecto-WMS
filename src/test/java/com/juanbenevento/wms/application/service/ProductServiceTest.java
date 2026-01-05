@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.application.service;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.ProductMapper;
 import com.juanbenevento.wms.application.ports.in.command.CreateProductCommand;
 import com.juanbenevento.wms.application.ports.out.ProductRepositoryPort;
 import com.juanbenevento.wms.domain.exception.ProductInUseException;
@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 class ProductServiceTest {
 
     @Mock private ProductRepositoryPort productRepository;
-    @Mock private WmsMapper mapper; // <--- Mock necesario
+    @Mock private ProductMapper mapper;
 
     @InjectMocks
     private ProductService productService;

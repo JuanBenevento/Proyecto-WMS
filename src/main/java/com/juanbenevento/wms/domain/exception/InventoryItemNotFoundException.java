@@ -1,8 +1,5 @@
 package com.juanbenevento.wms.domain.exception;
 
-/**
- * Excepción lanzada cuando se intenta operar con un item de inventario que no existe.
- */
 public class InventoryItemNotFoundException extends DomainException {
     
     private final String lpn;

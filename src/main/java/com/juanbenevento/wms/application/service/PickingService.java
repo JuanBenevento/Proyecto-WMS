@@ -10,6 +10,7 @@ import com.juanbenevento.wms.domain.model.InventoryItem;
 import com.juanbenevento.wms.domain.model.InventoryStatus;
 import com.juanbenevento.wms.domain.model.Location;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PickingService implements AllocateStockUseCase {
 
     private final InventoryRepositoryPort inventoryRepository;
@@ -28,9 +30,11 @@ public class PickingService implements AllocateStockUseCase {
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    @Transactional
+    @Transactional // La transacción mantiene el LOCK de base de datos
     public void allocateStock(AllocateStockCommand command) {
-        List<InventoryItem> availableItems = inventoryRepository.findAvailableStock(command.sku());
+        log.info("Iniciando asignación segura para SKU: {} Cantidad: {}", command.sku(), command.quantity());
+
+        List<InventoryItem> availableItems = inventoryRepository.findAvailableStockForAllocation(command.sku());
 
         double quantityNeeded = command.quantity();
         double totalAvailable = availableItems.stream().mapToDouble(InventoryItem::getQuantity).sum();
@@ -39,31 +43,31 @@ public class PickingService implements AllocateStockUseCase {
             throw new DomainException("Stock insuficiente. Disponible: " + totalAvailable + ", Solicitado: " + quantityNeeded);
         }
 
+        // 3. Algoritmo de Asignación (FEFO ya garantizado por el orden de la query)
         for (InventoryItem item : availableItems) {
             if (quantityNeeded <= 0) break;
 
-            // Cargamos la Location para mantener consistencia
             Location location = locationRepository.findByCode(item.getLocationCode()).orElseThrow();
-
             double currentQty = item.getQuantity();
             double quantityToTake = Math.min(currentQty, quantityNeeded);
 
+            // Caso A: Tomamos todo el pallet/caja
             if (currentQty == quantityToTake) {
-                // CASO A: Tomamos todo el pallet
                 item.setStatus(InventoryStatus.RESERVED);
-                inventoryRepository.save(item);
-            } else {
-                // CASO B: Split (División)
-                // 1. Liberamos temporalmente el item de la ubicación
+                // No necesitamos cambiar peso en Location porque el item sigue ahí físicamente, solo cambió de dueño lógico.
+                inventoryRepository.save(item); // Incrementa @Version automáticamente
+            }
+            // Caso B: Tomamos una parte (Split)
+            else {
+                // Sacamos el item original de la ubicación para recalcular pesos
                 location.releaseLoad(item);
 
-                // 2. Reducimos el item original
+                // Reducimos cantidad del original
                 item.setQuantity(currentQty - quantityToTake);
-                System.out.println("DEBUG TEST: Item seteado a: " + item.getQuantity()); // <--- ¿QUÉ IMPRIME ESTO?
-                location.consolidateLoad(item); // Reingresamos el remanente
+                location.consolidateLoad(item); // Vuelve a entrar con menos peso
                 inventoryRepository.save(item);
 
-                // 3. Crear nuevo item RESERVADO
+                // Creamos el nuevo item RESERVADO (el "hijo")
                 InventoryItem reservedPart = new InventoryItem(
                         generatePickingLpn(),
                         item.getProductSku(),
@@ -72,18 +76,19 @@ public class PickingService implements AllocateStockUseCase {
                         item.getBatchNumber(),
                         item.getExpiryDate(),
                         InventoryStatus.RESERVED,
-                        item.getLocationCode(), // <--- Correcto: Misma ubicación
+                        item.getLocationCode(),
                         null
                 );
-                // Ingresamos la parte reservada a la ubicación
-                location.consolidateLoad(reservedPart);
 
+                location.consolidateLoad(reservedPart); // Entra el hijo a la ubicación
                 inventoryRepository.save(reservedPart);
-                locationRepository.save(location);
+                locationRepository.save(location); // Guardamos estado final de la ubicación
             }
+
             quantityNeeded -= quantityToTake;
         }
 
+        // 4. Evento de éxito
         eventPublisher.publishEvent(new StockReservedEvent(
                 command.sku(), command.quantity(), getCurrentUser(), LocalDateTime.now()
         ));

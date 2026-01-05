@@ -1,6 +1,7 @@
 package com.juanbenevento.wms.infrastructure.adapter.out.persistence.adapter;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.InventoryMapper;
+import com.juanbenevento.wms.application.mapper.LocationMapper;
 import com.juanbenevento.wms.application.ports.out.LocationRepositoryPort;
 import com.juanbenevento.wms.domain.model.InventoryItem;
 import com.juanbenevento.wms.domain.model.Location;
@@ -21,7 +22,8 @@ public class LocationPersistenceAdapter implements LocationRepositoryPort {
 
     private final SpringDataLocationRepository locationRepository;
     private final SpringDataInventoryRepository inventoryRepository;
-    private final WmsMapper mapper;
+    private final LocationMapper mapper;
+    private final InventoryMapper mapperInventory;
 
     @Override
     public Location save(Location location) {
@@ -65,7 +67,7 @@ public class LocationPersistenceAdapter implements LocationRepositoryPort {
     private Location hydrateLocation(LocationEntity entity) {
         List<InventoryItem> items = inventoryRepository.findByLocationCode(entity.getLocationCode())
                 .stream()
-                .map(mapper::toItemDomain)
+                .map(mapperInventory::toItemDomain)
                 .toList();
 
         return mapper.toLocationDomain(entity, items);

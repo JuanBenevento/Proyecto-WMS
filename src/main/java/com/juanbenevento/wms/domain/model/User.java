@@ -7,7 +7,7 @@ import lombok.Getter;
 public class User {
     private final Long id;
     private final String username;
-    private String password; // No final, se puede cambiar
+    private String password;
     private Role role;
     private final String tenantId;
 
@@ -20,12 +20,10 @@ public class User {
         validateState();
     }
 
-    // Factory Method
     public static User create(String username, String encodedPassword, Role role, String tenantId) {
         return new User(null, username, encodedPassword, role, tenantId);
     }
 
-    // Comportamiento de Dominio
     public void changePassword(String newEncodedPassword) {
         if (newEncodedPassword == null || newEncodedPassword.isBlank()) {
             throw new DomainException("La contraseña no puede estar vacía");

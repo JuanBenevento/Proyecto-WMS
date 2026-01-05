@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.application.service;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.ProductMapper;
 import com.juanbenevento.wms.application.ports.in.command.CreateProductCommand;
 import com.juanbenevento.wms.application.ports.in.dto.ProductResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageProductUseCase;
@@ -21,7 +21,7 @@ import java.util.List;
 public class ProductService implements ManageProductUseCase {
 
     private final ProductRepositoryPort productRepository;
-    private final WmsMapper mapper;
+    private final ProductMapper mapper;
 
     @Override
     @Transactional(readOnly = true)

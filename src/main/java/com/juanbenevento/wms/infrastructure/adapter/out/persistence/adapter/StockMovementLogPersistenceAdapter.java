@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.infrastructure.adapter.out.persistence.adapter;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.AuditLogMapper;
 import com.juanbenevento.wms.application.ports.out.StockMovementLogRepositoryPort;
 import com.juanbenevento.wms.domain.model.AuditLog;
 import com.juanbenevento.wms.infrastructure.adapter.out.persistence.repository.SpringDataStockMovementLogRepository;
@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class StockMovementLogPersistenceAdapter implements StockMovementLogRepositoryPort {
 
     private final SpringDataStockMovementLogRepository jpaRepository;
-    private final WmsMapper mapper;
+    private final AuditLogMapper mapper;
 
     @Override
     public void save(AuditLog log) {

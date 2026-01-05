@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.infrastructure.adapter.out.persistence.adapter;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.ProductMapper;
 import com.juanbenevento.wms.application.ports.out.ProductRepositoryPort;
 import com.juanbenevento.wms.domain.model.Product;
 import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entity.ProductEntity;
@@ -19,7 +19,7 @@ public class ProductPersistenceAdapter implements ProductRepositoryPort {
 
     private final SpringDataProductRepository springRepository;
     private final SpringDataInventoryRepository inventoryRepository;
-    private final WmsMapper mapper; // Usamos el Mapper Central
+    private final ProductMapper mapper;
 
     @Override
     public List<Product> findAll() {
@@ -49,7 +49,6 @@ public class ProductPersistenceAdapter implements ProductRepositoryPort {
 
     @Override
     public boolean existsInInventory(String sku) {
-        // Optimización: Usamos count en lugar de traer la lista
         return !inventoryRepository.findByProductSku(sku).isEmpty();
     }
 }

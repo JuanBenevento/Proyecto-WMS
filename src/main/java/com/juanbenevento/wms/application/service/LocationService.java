@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.application.service;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.LocationMapper;
 import com.juanbenevento.wms.application.ports.in.command.CreateLocationCommand;
 import com.juanbenevento.wms.application.ports.in.dto.LocationResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageLocationUseCase;
@@ -19,7 +19,7 @@ import java.util.List;
 public class LocationService implements ManageLocationUseCase {
 
     private final LocationRepositoryPort locationRepository;
-    private final WmsMapper mapper;
+    private final LocationMapper mapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -36,7 +36,6 @@ public class LocationService implements ManageLocationUseCase {
             throw new DomainException("La ubicación ya existe: " + command.locationCode());
         }
 
-        // USO DEL FACTORY METHOD (Más limpio que pasar nulls)
         Location newLocation = Location.createEmpty(
                 command.locationCode(),
                 command.zoneType(),
@@ -58,13 +57,12 @@ public class LocationService implements ManageLocationUseCase {
             throw new DomainException("No puedes reducir la capacidad máxima por debajo del peso actual ocupado.");
         }
 
-        // Reconstruimos para update (Inmutabilidad del Aggregate Root)
         Location updated = new Location(
                 code,
                 command.zoneType(),
                 command.maxWeight(),
                 command.maxVolume(),
-                location.getItems(), // Mantenemos los items existentes
+                location.getItems(),
                 location.getVersion()
         );
 

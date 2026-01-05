@@ -11,5 +11,5 @@ public record LocationResponse(
         Double maxVolume,
         Double currentVolume,
         Double occupancyPercentage,
-        List<InventoryItemResponse> items // Lista anidada para evitar N+1 queries en el front
+        List<InventoryItemResponse> items
 ) {}

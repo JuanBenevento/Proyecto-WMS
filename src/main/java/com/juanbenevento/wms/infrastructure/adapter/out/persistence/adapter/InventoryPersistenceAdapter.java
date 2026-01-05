@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.infrastructure.adapter.out.persistence.adapter;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.InventoryMapper;
 import com.juanbenevento.wms.application.ports.out.InventoryRepositoryPort;
 import com.juanbenevento.wms.domain.model.InventoryItem;
 import com.juanbenevento.wms.domain.model.InventoryStatus;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class InventoryPersistenceAdapter implements InventoryRepositoryPort {
 
     private final SpringDataInventoryRepository jpaRepository;
-    private final WmsMapper mapper;
+    private final InventoryMapper mapper;
 
     @Override
     public InventoryItem save(InventoryItem item) {
@@ -60,6 +60,14 @@ public class InventoryPersistenceAdapter implements InventoryRepositoryPort {
     @Override
     public List<InventoryItem> findAll() {
         return jpaRepository.findAll()
+                .stream()
+                .map(mapper::toItemDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InventoryItem> findAvailableStockForAllocation(String sku) {
+        return jpaRepository.findAndLockByProductSku(sku, InventoryStatus.AVAILABLE)
                 .stream()
                 .map(mapper::toItemDomain)
                 .collect(Collectors.toList());

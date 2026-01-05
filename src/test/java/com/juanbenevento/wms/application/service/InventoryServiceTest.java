@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.application.service;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.InventoryMapper;
 import com.juanbenevento.wms.application.ports.in.command.InventoryAdjustmentCommand;
 import com.juanbenevento.wms.application.ports.in.command.PutAwayInventoryCommand;
 import com.juanbenevento.wms.application.ports.in.command.ReceiveInventoryCommand;
@@ -33,10 +33,12 @@ class InventoryServiceTest {
     @Mock private ProductRepositoryPort productRepository;
     @Mock private LocationRepositoryPort locationRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
-    @Mock private WmsMapper mapper;
+    @Mock private InventoryMapper mapper;
 
     @InjectMocks
-    private InventoryService inventoryService;
+    private InternalOperationsService inventoryService;
+    @InjectMocks
+    private InboundService inboundService;
 
     @Test
     void shouldReceiveInventorySuccessfully() {
@@ -53,7 +55,7 @@ class InventoryServiceTest {
 
         when(mapper.toItemResponse(any())).thenReturn(new InventoryItemResponse("LPN-1", sku, "TV", 10.0, "AVAILABLE", "B1", null, locationCode));
 
-        InventoryItemResponse result = inventoryService.receiveInventory(command);
+        InventoryItemResponse result = inboundService.receiveInventory(command);
 
         assertNotNull(result);
         verify(eventPublisher).publishEvent(any(StockReceivedEvent.class));

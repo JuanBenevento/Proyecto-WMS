@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.infrastructure.adapter.out.persistence.adapter;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.UserMapper;
 import com.juanbenevento.wms.application.ports.out.UserRepositoryPort;
 import com.juanbenevento.wms.domain.model.User;
 import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entity.UserEntity;
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class UserPersistenceAdapter implements UserRepositoryPort {
 
     private final SpringDataUserRepository jpaRepository;
-    private final WmsMapper mapper;
+    private final UserMapper mapper;
 
     @Override
     public User save(User user) {

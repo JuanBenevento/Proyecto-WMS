@@ -1,10 +1,7 @@
 package com.juanbenevento.wms.infrastructure.event_listener;
 
 import com.juanbenevento.wms.application.ports.out.StockMovementLogRepositoryPort;
-import com.juanbenevento.wms.domain.event.InventoryAdjustedEvent;
-import com.juanbenevento.wms.domain.event.StockReceivedEvent;
-import com.juanbenevento.wms.domain.event.StockReservedEvent;
-import com.juanbenevento.wms.domain.event.StockShippedEvent;
+import com.juanbenevento.wms.domain.event.*;
 import com.juanbenevento.wms.domain.model.AuditLog;
 import com.juanbenevento.wms.domain.model.StockMovementType;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +11,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 
@@ -26,8 +26,8 @@ public class AuditEventListener {
     private final StockMovementLogRepositoryPort stockMovementLogRepositoryPort;
 
     @Async
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleInventoryAdjustment(InventoryAdjustedEvent event) {
         double diff = event.newQuantity() - event.oldQuantity();
         String tipo = diff < 0 ? "PÉRDIDA" : "GANANCIA";
@@ -59,8 +59,8 @@ public class AuditEventListener {
     }
 
     @Async
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleStockReceived(StockReceivedEvent event) {
         log.info("📦 [AUDITORÍA DE STOCK] Recepción detectada: LPN: {} | SKU: {} | Cantidad: {}",
                 event.lpn(), event.sku(), event.quantity());
@@ -84,8 +84,8 @@ public class AuditEventListener {
         log.debug("✅ Registro de auditoría guardado: RECEPCION para LPN {}", event.lpn());
     }
 
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleReservation(StockReservedEvent event) {
         AuditLog log = new AuditLog(
                 null,
@@ -102,8 +102,8 @@ public class AuditEventListener {
         stockMovementLogRepositoryPort.save(log);
     }
 
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleShipping(StockShippedEvent event) {
         AuditLog log = new AuditLog(
                 null,
@@ -117,6 +117,28 @@ public class AuditEventListener {
                 "Despacho confirmado desde " + event.locationCode()
         );
         stockMovementLogRepositoryPort.save(log);
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleStockMove(StockMovedEvent event) {
+        log.info("🚚 [AUDITORÍA] Movimiento: {} | LPN: {} | De {} a {}",
+                event.type(), event.lpn(), event.oldLocation(), event.newLocation());
+
+        AuditLog auditLog = new AuditLog(
+                null,
+                event.occurredAt(),
+                StockMovementType.MOVIMIENTO,
+                event.sku(),
+                event.lpn(),
+                event.quantity(),
+                0.0, 0.0, // No hubo cambio de cantidad, solo de lugar
+                event.username(),
+                event.type() + ": De " + event.oldLocation() + " a " + event.newLocation()
+        );
+
+        stockMovementLogRepositoryPort.save(auditLog);
     }
 
     private String getCurrentUsername() {

@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.infrastructure.adapter.out.persistence.adapter;
 
-import com.juanbenevento.wms.application.mapper.WmsMapper;
+import com.juanbenevento.wms.application.mapper.TenantMapper;
 import com.juanbenevento.wms.application.ports.out.TenantRepositoryPort;
 import com.juanbenevento.wms.domain.model.Tenant;
 import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entity.TenantEntity;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class TenantPersistenceAdapter implements TenantRepositoryPort {
 
     private final SpringDataTenantRepository jpaRepository;
-    private final WmsMapper mapper;
+    private final TenantMapper mapper;
 
     @Override
     public void save(Tenant tenant) {

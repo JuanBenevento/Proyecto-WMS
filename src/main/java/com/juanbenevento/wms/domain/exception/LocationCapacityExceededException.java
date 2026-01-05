@@ -1,9 +1,5 @@
 package com.juanbenevento.wms.domain.exception;
 
-/**
- * Excepción lanzada cuando se intenta agregar carga a una ubicación
- * que excede su capacidad máxima (peso o volumen).
- */
 public class LocationCapacityExceededException extends DomainException {
     
     private final String locationCode;

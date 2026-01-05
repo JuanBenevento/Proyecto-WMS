@@ -9,11 +9,20 @@
     <div class="row g-3">
       <div class="col-md-3 col-sm-6" *ngFor="let loc of locations">
         
-        <div class="card location-card border-0 shadow-sm">
+        <div class="card location-card border-0 shadow-sm" (click)="showContent(loc)">
           <div class="card-body p-2 text-center">
             
             <h5 class="fw-bold mb-1">{{ loc.locationCode }}</h5>
-            <span class="badge bg-secondary mb-2">{{ loc.zoneType }}</span>
+            
+            <span class="badge mb-2" 
+                  [ngClass]="{
+                    'bg-secondary': loc.zoneType === 'DRY_STORAGE',
+                    'bg-info text-dark': loc.zoneType === 'COLD_STORAGE',
+                    'bg-primary': loc.zoneType === 'FROZEN_STORAGE',
+                    'bg-warning text-dark': loc.zoneType === 'HAZMAT'
+                  }">
+              {{ loc.zoneType }}
+            </span>
 
             <div class="progress" style="height: 20px;">
               <div 

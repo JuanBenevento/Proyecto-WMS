@@ -36,14 +36,12 @@ class PickingServiceTest {
 
         Product product = new Product(UUID.randomUUID(), sku, "P", "D", new Dimensions(1.0,1.0,1.0, 1.0), 1L);
 
-        // Item mutable
         InventoryItem originalItem = new InventoryItem("LPN-ORIGINAL", sku, product, 10.0, "B1", LocalDate.now(), InventoryStatus.AVAILABLE, locCode, 1L);
 
         Location location = Location.createEmpty(locCode, ZoneType.DRY_STORAGE, 100.0, 100.0);
         location.consolidateLoad(originalItem);
 
-        // Mock del Repositorio de búsqueda
-        when(inventoryRepository.findAvailableStock(sku)).thenAnswer(inv -> {
+        when(inventoryRepository.findAvailableStockForAllocation(sku)).thenAnswer(inv -> {
             List<InventoryItem> list = new java.util.ArrayList<>();
             list.add(originalItem);
             return list;
@@ -66,7 +64,6 @@ class PickingServiceTest {
         pickingService.allocateStock(new AllocateStockCommand(sku, 4.0));
 
         // THEN
-
         verify(inventoryRepository, atLeast(2)).save(any());
     }
 }

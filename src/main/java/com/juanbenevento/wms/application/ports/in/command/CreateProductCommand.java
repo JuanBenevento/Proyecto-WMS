@@ -1,6 +1,5 @@
 package com.juanbenevento.wms.application.ports.in.command;
 
-// Un Record es perfecto para transportar datos (DTO)
 public record CreateProductCommand(
         String sku,
         String name,
