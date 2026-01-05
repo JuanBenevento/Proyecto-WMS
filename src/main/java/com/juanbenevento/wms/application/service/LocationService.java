@@ -1,63 +1,60 @@
 package com.juanbenevento.wms.application.service;
 
+import com.juanbenevento.wms.application.mapper.LocationMapper;
 import com.juanbenevento.wms.application.ports.in.command.CreateLocationCommand;
+import com.juanbenevento.wms.application.ports.in.dto.LocationResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageLocationUseCase;
 import com.juanbenevento.wms.application.ports.out.LocationRepositoryPort;
+import com.juanbenevento.wms.domain.exception.DomainException;
+import com.juanbenevento.wms.domain.exception.LocationNotFoundException;
 import com.juanbenevento.wms.domain.model.Location;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class LocationService implements ManageLocationUseCase {
+
     private final LocationRepositoryPort locationRepository;
+    private final LocationMapper mapper;
 
     @Override
-    public List<Location> getAllLocations() {
-        return locationRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<LocationResponse> getAllLocations() {
+        return locationRepository.findAll().stream()
+                .map(mapper::toLocationResponse)
+                .toList();
     }
 
     @Override
-    public Location createLocation(CreateLocationCommand command) {
+    @Transactional
+    public LocationResponse createLocation(CreateLocationCommand command) {
         if (locationRepository.findByCode(command.locationCode()).isPresent()) {
-            throw new IllegalArgumentException("La ubicación " + command.locationCode() + " ya existe.");
+            throw new DomainException("La ubicación ya existe: " + command.locationCode());
         }
 
-        Location newLocation = new Location(
+        Location newLocation = Location.createEmpty(
                 command.locationCode(),
                 command.zoneType(),
                 command.maxWeight(),
-                command.maxVolume(),
-                null
-
+                command.maxVolume()
         );
 
-        return locationRepository.save(newLocation);
+        Location saved = locationRepository.save(newLocation);
+        return mapper.toLocationResponse(saved);
     }
 
     @Override
-    public void deleteLocation(String code) {
-        if (locationRepository.findByCode(code).isEmpty()) {
-            throw new IllegalArgumentException("La ubicación no existe");
-        }
-
-        if (locationRepository.hasInventory(code)) {
-            throw new IllegalStateException("No se puede eliminar la ubicación " + code + " porque tiene stock asociado.");
-        }
-
-        locationRepository.delete(code);
-    }
-
-
-    @Override
-    public Location updateLocation(String code, CreateLocationCommand command) {
+    @Transactional
+    public LocationResponse updateLocation(String code, CreateLocationCommand command) {
         Location location = locationRepository.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("La ubicación no existe"));
+                .orElseThrow(() -> new LocationNotFoundException(code));
 
         if (command.maxWeight() < location.getCurrentWeight()) {
-            throw new IllegalArgumentException("No puedes reducir la capacidad por debajo del peso actual.");
+            throw new DomainException("No puedes reducir la capacidad máxima por debajo del peso actual ocupado.");
         }
 
         Location updated = new Location(
@@ -65,11 +62,23 @@ public class LocationService implements ManageLocationUseCase {
                 command.zoneType(),
                 command.maxWeight(),
                 command.maxVolume(),
-                location.getCurrentWeight(),
-                location.getCurrentVolume(),
+                location.getItems(),
                 location.getVersion()
         );
 
-        return locationRepository.save(updated);
+        return mapper.toLocationResponse(locationRepository.save(updated));
+    }
+
+    @Override
+    @Transactional
+    public void deleteLocation(String code) {
+        if (locationRepository.findByCode(code).isEmpty()) {
+            throw new LocationNotFoundException(code);
+        }
+
+        if (locationRepository.hasInventory(code)) {
+            throw new DomainException("No se puede eliminar la ubicación " + code + " porque tiene stock asociado.");
+        }
+        locationRepository.delete(code);
     }
 }

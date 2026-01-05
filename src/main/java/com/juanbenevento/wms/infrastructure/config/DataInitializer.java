@@ -1,8 +1,8 @@
 package com.juanbenevento.wms.infrastructure.config;
 
 import com.juanbenevento.wms.domain.model.Role;
-import com.juanbenevento.wms.infrastructure.adapter.out.persistence.SpringDataUserRepository;
-import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entities.UserEntity;
+import com.juanbenevento.wms.infrastructure.adapter.out.persistence.repository.SpringDataUserRepository;
+import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entity.UserEntity;
 import com.juanbenevento.wms.infrastructure.config.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,7 +1,12 @@
 package com.juanbenevento.wms.application.service;
 
+import com.juanbenevento.wms.application.mapper.UserMapper;
+import com.juanbenevento.wms.application.ports.in.command.CreateUserCommand; // <--- Nuevo
+import com.juanbenevento.wms.application.ports.in.dto.UserResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageUserUseCase;
 import com.juanbenevento.wms.application.ports.out.UserRepositoryPort;
+import com.juanbenevento.wms.domain.exception.DomainException;
+import com.juanbenevento.wms.domain.exception.UserAlreadyExistsException;
 import com.juanbenevento.wms.domain.model.Role;
 import com.juanbenevento.wms.domain.model.User;
 import com.juanbenevento.wms.infrastructure.config.tenant.TenantContext;
@@ -11,59 +16,51 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UserService implements ManageUserUseCase {
 
-    // Inyección de dependencias por interfaz (Puerto)
     private final UserRepositoryPort userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper mapper;
 
     @Override
+    @Transactional(readOnly = true)
     public List<UserResponse> getAllUsers() {
-        // Convertimos la lista de Dominios (User) a DTOs (UserResponse)
         return userRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .map(mapper::toUserResponse)
+                .toList();
     }
 
     @Override
     @Transactional
-    public UserResponse createUser(CreateUserRequest request) {
-        // 1. Validar si ya existe
-        if (userRepository.findByUsername(request.username()).isPresent()) {
-            throw new IllegalArgumentException("El nombre de usuario ya existe.");
+    public UserResponse createUser(CreateUserCommand command) {
+        if (userRepository.findByUsername(command.username()).isPresent()) {
+            throw new UserAlreadyExistsException(command.username());
         }
 
-        // 2. Obtener la empresa actual (Tenant)
         String currentTenant = TenantContext.getTenantId();
-        if (currentTenant == null) {
-            throw new IllegalStateException("Error de seguridad: No se puede crear usuario sin contexto de empresa.");
+        if (currentTenant == null || currentTenant.isBlank()) {
+            throw new DomainException("Error de seguridad: Falta contexto de Tenant.");
         }
 
-        // 3. Crear Objeto de Dominio (Puro)
-        User user = new User(
-                null, // El ID se genera en base de datos
-                request.username(),
-                passwordEncoder.encode(request.password()), // Encriptamos aquí
-                request.role(),
+        User user = User.create(
+                command.username(),
+                passwordEncoder.encode(command.password()),
+                command.role(),
                 currentTenant
         );
 
-        // 4. Guardar a través del Puerto
-        // El adaptador se encargará de convertir User -> UserEntity
         User savedUser = userRepository.save(user);
-
-        return mapToResponse(savedUser);
+        return mapper.toUserResponse(savedUser);
     }
 
     @Override
     @Transactional
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new IllegalArgumentException("Usuario no encontrado");
+            throw new DomainException("Usuario no encontrado: " + id);
         }
         userRepository.deleteById(id);
     }
@@ -71,14 +68,5 @@ public class UserService implements ManageUserUseCase {
     @Override
     public Role[] getAvailableRoles() {
         return Role.values();
-    }
-
-    // --- Mapper Privado ---
-    private UserResponse mapToResponse(User user) {
-        return new UserResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getRole()
-        );
     }
 }

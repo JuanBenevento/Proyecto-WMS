@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.infrastructure.adapter.out.persistence.listener;
 
-import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entities.AuditableEntity;
+import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entity.AuditableEntity;
 import com.juanbenevento.wms.infrastructure.config.tenant.TenantContext;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreRemove;

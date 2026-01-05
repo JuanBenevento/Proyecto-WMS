@@ -3,6 +3,7 @@ package com.juanbenevento.wms.application.service;
 import com.juanbenevento.wms.application.ports.in.command.OnboardCompanyCommand;
 import com.juanbenevento.wms.application.ports.out.TenantRepositoryPort;
 import com.juanbenevento.wms.application.ports.out.UserRepositoryPort;
+import com.juanbenevento.wms.domain.exception.TenantAlreadyExistsException;
 import com.juanbenevento.wms.domain.model.Tenant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,18 +28,19 @@ class SaaSManagementServiceTest {
 
     @Test
     void shouldOnboardNewCompanySuccessfully() {
-        // --- GIVEN (DADO) ---
+        // GIVEN
         OnboardCompanyCommand command = new OnboardCompanyCommand(
                 "Coca Cola", "COCA", "admin@coca.com", "admin_coca", "secret123"
         );
 
         when(tenantRepository.existsById("COCA")).thenReturn(false);
+        when(userRepository.existsByUsername("admin_coca")).thenReturn(false);
         when(passwordEncoder.encode("secret123")).thenReturn("HASH_SECRETO");
 
-        // --- WHEN (CUANDO) ---
+        // WHEN
         saasService.onboardNewCustomer(command);
 
-        // --- THEN (ENTONCES) ---
+        // THEN
         verify(tenantRepository).save(any(Tenant.class));
 
         verify(userRepository).save(argThat(user ->
@@ -50,14 +52,14 @@ class SaaSManagementServiceTest {
 
     @Test
     void shouldFailIfCompanyAlreadyExists() {
-        // --- GIVEN ---
+        // GIVEN
         OnboardCompanyCommand command = new OnboardCompanyCommand(
                 "Coca Cola", "COCA", "mail", "user", "pass"
         );
 
         when(tenantRepository.existsById("COCA")).thenReturn(true);
 
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(TenantAlreadyExistsException.class, () -> {
             saasService.onboardNewCustomer(command);
         });
 

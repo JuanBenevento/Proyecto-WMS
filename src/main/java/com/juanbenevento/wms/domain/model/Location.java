@@ -1,60 +1,90 @@
 package com.juanbenevento.wms.domain.model;
 
-import lombok.AllArgsConstructor;
+import com.juanbenevento.wms.domain.exception.LocationCapacityExceededException;
 import lombok.Getter;
 
-@AllArgsConstructor
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 @Getter
 public class Location {
+
     private final String locationCode;
     private final ZoneType zoneType;
-
     private final Double maxWeight;
     private final Double maxVolume;
-
+    private final List<InventoryItem> items;
     private Double currentWeight;
     private Double currentVolume;
+    private final Long version;
 
-    private Long version;
-
-    public Location(String locationCode, ZoneType zoneType, Double maxWeight, Double maxVolume, Long version) {
+    public Location(String locationCode, ZoneType zoneType, Double maxWeight, Double maxVolume,
+                    List<InventoryItem> items, Long version) {
         this.locationCode = locationCode;
         this.zoneType = zoneType;
         this.maxWeight = maxWeight;
         this.maxVolume = maxVolume;
-        this.currentWeight = 0.0;
-        this.currentVolume = 0.0;
+        this.items = (items != null) ? new ArrayList<>(items) : new ArrayList<>();
         this.version = version;
+        recalculateTotals();
     }
 
-    // --- LOGICA DE NEGOCIO ---
-
-    public boolean hasSpaceFor(Product product, Double quantity) {
-        Double incomingWeight = product.getDimensions().weight() * quantity;
-        Double incomingVolume = product.getStorageVolume() * quantity;
-
-        return (currentWeight + incomingWeight) <= maxWeight
-                && (currentVolume + incomingVolume) <= maxVolume;
+    // --- FACTORY METHOD (DDD) ---
+    // Permite crear ubicaciones nuevas de forma semántica sin pasar nulls manualmente
+    public static Location createEmpty(String locationCode, ZoneType zoneType, Double maxWeight, Double maxVolume) {
+        return new Location(locationCode, zoneType, maxWeight, maxVolume, new ArrayList<>(), null);
     }
 
-    public boolean hasSpaceFor(Double incomingWeight, Double incomingVolume) {
-        return (this.currentWeight + incomingWeight <= this.maxWeight) &&
-                (this.currentVolume + incomingVolume <= this.maxVolume);
-    }
+    // --- LÓGICA DE NEGOCIO ---
 
-    public void addLoad(Double weight, Double volume) {
-        if (!hasSpaceFor(weight, volume)) {
-            throw new IllegalStateException("La ubicación " + locationCode + " no soporta esta carga. Excede capacidad.");
+    public void consolidateLoad(InventoryItem newItem) {
+        Double incomingWeight = newItem.calculateTotalWeight();
+        Double incomingVolume = newItem.calculateTotalVolume();
+
+        if (!hasSpaceFor(incomingWeight, incomingVolume)) {
+            throw new LocationCapacityExceededException(
+                    this.locationCode,
+                    incomingWeight,
+                    incomingVolume,
+                    this.maxWeight,
+                    this.maxVolume
+            );
         }
-        this.currentWeight += weight;
-        this.currentVolume += volume;
+
+        Optional<InventoryItem> existing = items.stream()
+                .filter(i -> i.getProductSku().equals(newItem.getProductSku()) &&
+                        i.getBatchNumber().equals(newItem.getBatchNumber()))
+                .findFirst();
+
+        if (existing.isPresent()) {
+            existing.get().addQuantity(newItem.getQuantity());
+        } else {
+            items.add(newItem);
+        }
+
+        recalculateTotals();
     }
 
-    public void removeLoad(Double weight, Double volume) {
-        this.currentWeight -= weight;
-        this.currentVolume -= volume;
+    public void releaseLoad(InventoryItem item) {
+        Double weightToRelease = item.calculateTotalWeight();
+        Double volumeToRelease = item.calculateTotalVolume();
 
-        if (this.currentWeight < 0) this.currentWeight = 0.0;
-        if (this.currentVolume < 0) this.currentVolume = 0.0;
+        this.items.removeIf(i -> i.getLpn().equals(item.getLpn()));
+
+        this.currentWeight = Math.max(0.0, this.currentWeight - weightToRelease);
+        this.currentVolume = Math.max(0.0, this.currentVolume - volumeToRelease);
+
+        recalculateTotals();
+    }
+
+    private boolean hasSpaceFor(Double extraWeight, Double extraVolume) {
+        return (this.currentWeight + extraWeight <= this.maxWeight) &&
+                (this.currentVolume + extraVolume <= this.maxVolume);
+    }
+
+    private void recalculateTotals() {
+        this.currentWeight = items.stream().mapToDouble(InventoryItem::calculateTotalWeight).sum();
+        this.currentVolume = items.stream().mapToDouble(InventoryItem::calculateTotalVolume).sum();
     }
 }

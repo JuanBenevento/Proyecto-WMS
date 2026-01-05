@@ -1,7 +1,9 @@
 package com.juanbenevento.wms.application.service;
 
+import com.juanbenevento.wms.application.mapper.ProductMapper;
 import com.juanbenevento.wms.application.ports.in.command.CreateProductCommand;
 import com.juanbenevento.wms.application.ports.out.ProductRepositoryPort;
+import com.juanbenevento.wms.domain.exception.ProductInUseException;
 import com.juanbenevento.wms.domain.model.Dimensions;
 import com.juanbenevento.wms.domain.model.Product;
 import org.junit.jupiter.api.Test;
@@ -19,8 +21,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
 
-    @Mock
-    private ProductRepositoryPort productRepository;
+    @Mock private ProductRepositoryPort productRepository;
+    @Mock private ProductMapper mapper;
 
     @InjectMocks
     private ProductService productService;
@@ -28,22 +30,16 @@ class ProductServiceTest {
     @Test
     void shouldThrowError_WhenUpdatingDimensionsWithExistingStock() {
         String sku = "TV-01";
-        // Producto existente (Peso 10kg)
         Product existing = new Product(UUID.randomUUID(), sku, "TV", "Desc", new Dimensions(10.0, 10.0, 10.0, 10.0), 1L);
-
-        // Comando de actualización (Intentamos cambiar peso a 20kg)
         CreateProductCommand updateCmd = new CreateProductCommand(sku, "TV", "Desc", 10.0, 10.0, 10.0, 20.0);
 
         when(productRepository.findBySku(sku)).thenReturn(Optional.of(existing));
-        // Simulamos que SÍ hay stock físico
         when(productRepository.existsInInventory(sku)).thenReturn(true);
 
-        // Acción y Verificación
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> {
+        assertThrows(ProductInUseException.class, () -> {
             productService.updateProduct(sku, updateCmd);
         });
 
-        assertTrue(ex.getMessage().contains("existe stock físico"));
         verify(productRepository, never()).save(any());
     }
 
@@ -51,16 +47,15 @@ class ProductServiceTest {
     void shouldAllowUpdate_WhenNoStockExists() {
         String sku = "TV-01";
         Product existing = new Product(UUID.randomUUID(), sku, "TV", "Desc", new Dimensions(10.0, 10.0, 10.0, 10.0), 1L);
-        // Cambio de peso
-        CreateProductCommand updateCmd = new CreateProductCommand(sku, "TV", "Desc", 10.0, 10.0, 10.0, 20.0);
+        CreateProductCommand updateCmd = new CreateProductCommand(sku, "TV", "Desc", 10.0, 10.0, 10.0, 20.0); // Cambio de peso
 
         when(productRepository.findBySku(sku)).thenReturn(Optional.of(existing));
-        // Simulamos que NO hay stock
         when(productRepository.existsInInventory(sku)).thenReturn(false);
 
         productService.updateProduct(sku, updateCmd);
 
-        // Debería guardar
         verify(productRepository).save(any(Product.class));
+        // Verify mapper call if needed
+        verify(mapper).toProductResponse(any());
     }
 }

@@ -1,94 +1,95 @@
 package com.juanbenevento.wms.application.service;
 
+import com.juanbenevento.wms.application.mapper.ProductMapper;
 import com.juanbenevento.wms.application.ports.in.command.CreateProductCommand;
+import com.juanbenevento.wms.application.ports.in.dto.ProductResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageProductUseCase;
 import com.juanbenevento.wms.application.ports.out.ProductRepositoryPort;
+import com.juanbenevento.wms.domain.exception.ProductAlreadyExistsException;
+import com.juanbenevento.wms.domain.exception.ProductInUseException;
+import com.juanbenevento.wms.domain.exception.ProductNotFoundException;
 import com.juanbenevento.wms.domain.model.Dimensions;
 import com.juanbenevento.wms.domain.model.Product;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService implements ManageProductUseCase {
-    private final ProductRepositoryPort productRepository;
 
-    public ProductService(ProductRepositoryPort productRepository) {
-        this.productRepository = productRepository;
+    private final ProductRepositoryPort productRepository;
+    private final ProductMapper mapper;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getAllProducts() {
+        return productRepository.findAll().stream()
+                .map(mapper::toProductResponse)
+                .toList();
     }
 
     @Override
-    public Product createProduct(CreateProductCommand command) {
+    @Transactional
+    public ProductResponse createProduct(CreateProductCommand command) {
         if (productRepository.findBySku(command.sku()).isPresent()) {
-            throw new IllegalArgumentException("El producto con SKU " + command.sku() + " ya existe.");
+            throw new ProductAlreadyExistsException(command.sku());
         }
 
         Dimensions dims = new Dimensions(
-                command.width(),
-                command.height(),
-                command.depth(),
-                command.weight()
+                command.width(), command.height(), command.depth(), command.weight()
         );
 
-        Product newProduct = new Product(
-                UUID.randomUUID(),
+        Product newProduct = Product.create(
                 command.sku(),
                 command.name(),
                 command.description(),
-                dims,
-                null
+                dims
         );
 
-        return productRepository.save(newProduct);
-    }
-
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        return mapper.toProductResponse(productRepository.save(newProduct));
     }
 
     @Override
-    public Product updateProduct(String sku, CreateProductCommand command) {
-        Product existing = productRepository.findBySku(sku)
-                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
+    @Transactional
+    public ProductResponse updateProduct(String sku, CreateProductCommand command) {
+        Product product = productRepository.findBySku(sku)
+                .orElseThrow(() -> new ProductNotFoundException(sku));
 
         Dimensions newDims = new Dimensions(
                 command.width(), command.height(), command.depth(), command.weight()
         );
 
-        boolean dimensionsChanged = !existing.getDimensions().equals(newDims);
+        boolean dimensionsChanged = !product.getDimensions().equals(newDims);
 
         if (dimensionsChanged && productRepository.existsInInventory(sku)) {
-            throw new IllegalStateException(
-                    "No se pueden modificar las dimensiones/peso del producto " + sku +
-                            " porque existe stock físico en el almacén. " +
-                            "Esto rompería los cálculos de capacidad de las ubicaciones."
-            );
+            throw new ProductInUseException(sku,
+                    "Existe stock físico en almacén. Modificar dimensiones rompería los cálculos de capacidad de las ubicaciones.");
         }
 
-        Product updated = new Product(
-                existing.getId(),
-                sku,
-                command.name(),
-                command.description(),
-                newDims,
-                existing.getVersion()
-        );
+        product.updateDetails(command.name(), command.description());
 
-        return productRepository.save(updated);
+        if (dimensionsChanged) {
+            product.changeDimensions(newDims);
+        }
+
+        return mapper.toProductResponse(productRepository.save(product));
     }
 
     @Override
+    @Transactional
     public void deleteProduct(String sku) {
         if (productRepository.findBySku(sku).isEmpty()) {
-            throw new IllegalArgumentException("Producto no encontrado");
+            throw new ProductNotFoundException(sku);
         }
 
+        // Validar integridad referencial de negocio
         if (productRepository.existsInInventory(sku)) {
-            throw new IllegalStateException("No se puede eliminar el producto " + sku + " porque tiene stock físico.");
+            throw new ProductInUseException(sku, "Tiene stock físico asociado.");
         }
 
         productRepository.delete(sku);
     }
-
 }

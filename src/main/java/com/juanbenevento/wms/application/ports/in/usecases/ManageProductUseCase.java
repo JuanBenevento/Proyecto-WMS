@@ -1,13 +1,13 @@
 package com.juanbenevento.wms.application.ports.in.usecases;
 
 import com.juanbenevento.wms.application.ports.in.command.CreateProductCommand;
-import com.juanbenevento.wms.domain.model.Product;
+import com.juanbenevento.wms.application.ports.in.dto.ProductResponse; // DTO
 
 import java.util.List;
 
 public interface ManageProductUseCase {
-    Product createProduct(CreateProductCommand command);
-    List<Product> getAllProducts();
-    Product updateProduct(String sku, CreateProductCommand command);
+    ProductResponse createProduct(CreateProductCommand command);
+    List<ProductResponse> getAllProducts();
+    ProductResponse updateProduct(String sku, CreateProductCommand command);
     void deleteProduct(String sku);
 }

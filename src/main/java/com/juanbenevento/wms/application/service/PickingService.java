@@ -3,12 +3,15 @@ package com.juanbenevento.wms.application.service;
 import com.juanbenevento.wms.application.ports.in.command.AllocateStockCommand;
 import com.juanbenevento.wms.application.ports.in.usecases.AllocateStockUseCase;
 import com.juanbenevento.wms.application.ports.out.InventoryRepositoryPort;
+import com.juanbenevento.wms.application.ports.out.LocationRepositoryPort;
 import com.juanbenevento.wms.domain.event.StockReservedEvent;
+import com.juanbenevento.wms.domain.exception.DomainException;
 import com.juanbenevento.wms.domain.model.InventoryItem;
 import com.juanbenevento.wms.domain.model.InventoryStatus;
+import com.juanbenevento.wms.domain.model.Location;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,74 +22,84 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PickingService implements AllocateStockUseCase {
+
     private final InventoryRepositoryPort inventoryRepository;
+    private final LocationRepositoryPort locationRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    @Transactional
+    @Transactional // La transacción mantiene el LOCK de base de datos
     public void allocateStock(AllocateStockCommand command) {
-        List<InventoryItem> availableItems = inventoryRepository.findAvailableStock(command.sku());
+        log.info("Iniciando asignación segura para SKU: {} Cantidad: {}", command.sku(), command.quantity());
+
+        List<InventoryItem> availableItems = inventoryRepository.findAvailableStockForAllocation(command.sku());
 
         double quantityNeeded = command.quantity();
-
         double totalAvailable = availableItems.stream().mapToDouble(InventoryItem::getQuantity).sum();
+
         if (totalAvailable < quantityNeeded) {
-            throw new RuntimeException("Stock insuficiente. Disponible: " + totalAvailable + ", Solicitado: " + quantityNeeded);
+            throw new DomainException("Stock insuficiente. Disponible: " + totalAvailable + ", Solicitado: " + quantityNeeded);
         }
 
-        // 2. Algoritmo de Asignación con SPLIT (División)
+        // 3. Algoritmo de Asignación (FEFO ya garantizado por el orden de la query)
         for (InventoryItem item : availableItems) {
             if (quantityNeeded <= 0) break;
 
+            Location location = locationRepository.findByCode(item.getLocationCode()).orElseThrow();
             double currentQty = item.getQuantity();
             double quantityToTake = Math.min(currentQty, quantityNeeded);
 
+            // Caso A: Tomamos todo el pallet/caja
             if (currentQty == quantityToTake) {
-                // CASO A: Tomamos el item completo (No hace falta dividir)
                 item.setStatus(InventoryStatus.RESERVED);
-                inventoryRepository.save(item);
-            } else {
-                // CASO B: Split (División) - Tomamos solo una parte
-                // 1. Reducimos la cantidad del item original (que sigue AVAILABLE)
+                // No necesitamos cambiar peso en Location porque el item sigue ahí físicamente, solo cambió de dueño lógico.
+                inventoryRepository.save(item); // Incrementa @Version automáticamente
+            }
+            // Caso B: Tomamos una parte (Split)
+            else {
+                // Sacamos el item original de la ubicación para recalcular pesos
+                location.releaseLoad(item);
+
+                // Reducimos cantidad del original
                 item.setQuantity(currentQty - quantityToTake);
+                location.consolidateLoad(item); // Vuelve a entrar con menos peso
                 inventoryRepository.save(item);
 
-                // 2. Creamos un NUEVO item para la parte reservada
-                // Generamos un nuevo LPN temporal para la reserva (Picking LPN)
+                // Creamos el nuevo item RESERVADO (el "hijo")
                 InventoryItem reservedPart = new InventoryItem(
-                        generatePickingLpn(), // Nuevo ID único
+                        generatePickingLpn(),
                         item.getProductSku(),
-                        quantityToTake, // La cantidad que nos llevamos
+                        item.getProduct(),
+                        quantityToTake,
                         item.getBatchNumber(),
                         item.getExpiryDate(),
-                        InventoryStatus.RESERVED, // Este nace reservado
+                        InventoryStatus.RESERVED,
                         item.getLocationCode(),
-                        null// Sigue en el mismo estante físicamente
+                        null
                 );
-                // (Si usas AuditableEntity, los campos de auditoría se llenan solos al guardar)
+
+                location.consolidateLoad(reservedPart); // Entra el hijo a la ubicación
                 inventoryRepository.save(reservedPart);
+                locationRepository.save(location); // Guardamos estado final de la ubicación
             }
 
             quantityNeeded -= quantityToTake;
         }
 
-        // 3. Publicar evento de éxito
+        // 4. Evento de éxito
         eventPublisher.publishEvent(new StockReservedEvent(
-                command.sku(),
-                command.quantity(),
-                getCurrentUser(),
-                LocalDateTime.now()
+                command.sku(), command.quantity(), getCurrentUser(), LocalDateTime.now()
         ));
     }
 
-    private String getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null ? auth.getName() : "SYSTEM";
+    private String generatePickingLpn() {
+        return "PICK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    private String generatePickingLpn() {
-        // Generamos un LPN especial para diferenciarlo de los pallets originales
-        return "PICK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    private String getCurrentUser() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "SYSTEM";
     }
 }
