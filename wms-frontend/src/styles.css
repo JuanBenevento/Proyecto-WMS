@@ -30,3 +30,27 @@
     @apply bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden;
   }
 }
+
+/* En tu styles.scss o en el style del componente */
+.active-link {
+  /* Fondo sutil */
+  background-color: rgba(79, 70, 229, 0.1); /* Indigo-600 con opacidad */
+  
+  /* Borde izquierdo indicador */
+  border-left-color: #4f46e5 !important; /* Indigo-600 */
+  
+  /* Texto destacado */
+  color: #4f46e5 !important; 
+  font-weight: 600;
+}
+
+/* Ajuste para modo oscuro */
+.bg-slate-900 .active-link {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-left-color: #6366f1 !important; /* Indigo-500 */
+  color: #ffffff !important;
+}
+
+.active-link i {
+  color: currentColor !important; /* El icono toma el color del texto activo */
+}

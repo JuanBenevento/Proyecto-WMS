@@ -34,6 +34,7 @@ public class InventoryController {
 
     @Operation(summary = "Ver stock real", description = "Lista todos los items con su LPN y estado.")
     @GetMapping
+    
     public ResponseEntity<List<InventoryItemResponse>> getAllInventory() {
         return ResponseEntity.ok(retrieveInventoryUseCase.getAllInventory());
     }
@@ -63,7 +64,6 @@ public class InventoryController {
     @Operation(summary = "Consultar Estrategia", description = "El sistema sugiere dónde guardar según el perfil del producto.")
     @GetMapping("/suggest-location")
     public ResponseEntity<String> suggestLocation(@RequestParam String sku, @RequestParam Double quantity) {
-        // Nota: Si el caso de uso lanza excepción, el GlobalExceptionHandler se encarga.
         String locationCode = suggestLocationUseCase.suggestBestLocation(sku, quantity);
         return ResponseEntity.ok(locationCode);
     }
