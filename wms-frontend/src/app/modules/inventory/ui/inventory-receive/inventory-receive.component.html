@@ -1,0 +1,93 @@
+<div class="max-w-4xl mx-auto">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    
+    <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+      <div>
+        <h2 class="text-xl font-bold tracking-tight flex items-center gap-2">
+          <i class="bi bi-box-arrow-in-down text-2xl"></i> 
+          Ingreso de Mercadería
+        </h2>
+        <p class="text-indigo-100 text-xs mt-1">Generación de LPN y Alta de Stock</p>
+      </div>
+      <div class="hidden sm:block text-right">
+        <span class="block text-xs uppercase font-bold opacity-75">Ubicación Destino</span>
+        <span class="text-lg font-mono font-bold">MUELLE / DOCK</span>
+      </div>
+    </div>
+
+    <div class="p-6 md:p-8">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-8">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Producto (SKU) <span class="text-red-500">*</span>
+            </label>
+            <div class="relative group">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <i class="bi bi-upc-scan text-slate-400 text-xl group-focus-within:text-indigo-500 transition-colors"></i>
+              </div>
+              <input type="text" formControlName="productSku"
+                     class="block w-full pl-12 pr-4 py-4 text-lg font-mono font-bold text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:bg-white transition-all uppercase placeholder:normal-case"
+                     placeholder="Escanear o escribir SKU...">
+            </div>
+            <p *ngIf="form.get('productSku')?.invalid && form.get('productSku')?.touched" class="mt-1 text-xs text-red-500 font-medium">SKU requerido.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Cantidad <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" formControlName="quantity" min="1"
+                     class="block w-full px-4 py-4 text-lg font-bold text-center text-indigo-700 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:bg-white transition-all">
+              <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400 font-bold text-xs">UNID.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lote / Batch</label>
+            <input type="text" formControlName="batchNumber"
+                   class="block w-full px-4 py-3 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 uppercase"
+                   placeholder="Ej: LOTE-2024-A">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Vencimiento</label>
+            <input type="date" formControlName="expiryDate"
+                   class="block w-full px-4 py-3 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+          </div>
+        </div>
+
+        <button type="submit" 
+                [disabled]="form.invalid || isLoading"
+                class="w-full relative group overflow-hidden rounded-xl bg-indigo-600 px-8 py-4 text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-700 hover:shadow-indigo-500/50 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed">
+          
+          <div class="relative flex items-center justify-center gap-3 font-bold tracking-wide text-lg">
+            <span *ngIf="isLoading" class="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white"></span>
+            <i *ngIf="!isLoading" class="bi bi-check-circle-fill text-xl"></i>
+            <span>{{ isLoading ? 'PROCESANDO...' : 'CONFIRMAR INGRESO' }}</span>
+          </div>
+        </button>
+
+      </form>
+    </div>
+    
+    <div *ngIf="lastLpn" class="bg-green-50 border-t border-green-100 px-6 py-4 flex items-center justify-between animate-in slide-in-from-bottom-2 fade-in duration-300">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-full bg-green-500 text-white flex items-center justify-center shadow-sm">
+          <i class="bi bi-check-lg text-xl"></i>
+        </div>
+        <div>
+          <p class="text-sm font-bold text-green-800">¡Ingreso Exitoso!</p>
+          <p class="text-xs text-green-700 font-mono">LPN: {{ lastLpn }}</p>
+        </div>
+      </div>
+      <button class="text-xs font-bold text-green-700 bg-white border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors">
+        IMPRIMIR ETIQUETA
+      </button>
+    </div>
+
+  </div>
+</div>

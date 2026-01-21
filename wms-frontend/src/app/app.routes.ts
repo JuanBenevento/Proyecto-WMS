@@ -32,14 +32,8 @@ export const routes: Routes = [
     path: 'saas',
     loadComponent: () => import('./core/layout/layouts/saas-layout.component').then(m => m.SaasLayoutComponent),
     canActivate: [authGuard, roleGuard],
-    data: { role: 'SUPER_ADMIN' }, 
-    children: [
-      { 
-        path: 'tenants', 
-        loadComponent: () => import('./modules/super-admin/ui/saas-dashboard/saas-dashboard.component').then(m => m.SaasDashboardComponent) 
-      },
-      { path: '', redirectTo: 'tenants', pathMatch: 'full' }
-    ]
+    data: { role: 'SUPER_ADMIN' },
+    loadChildren: () => import('./modules/super-admin/super-admin.routes').then(m => m.SUPER_ADMIN_ROUTES)
   },
 
   // --- ADMIN (Gerente) ---
