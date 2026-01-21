@@ -1,0 +1,145 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 transition-opacity"
+     (click)="cancel()">
+  
+  <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-enter ring-1 ring-white/10"
+       (click)="$event.stopPropagation()">
+
+    <div class="relative px-8 py-6 text-white overflow-hidden transition-colors duration-300"
+         [ngClass]="isEditMode() ? 'bg-gradient-to-r from-amber-500 to-orange-600' : 'bg-gradient-to-r from-indigo-600 to-blue-600'">
+      
+      <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/20 rounded-full blur-xl"></div>
+      
+      <div class="relative flex justify-between items-start z-10">
+        <div>
+          <h3 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <i [class]="isEditMode() ? 'bi bi-pencil-square' : 'bi bi-person-plus-fill'"></i>
+            {{ isEditMode() ? 'Editar Usuario' : 'Nuevo Usuario' }}
+          </h3>
+          <p class="text-white/80 text-sm mt-1">
+            {{ isEditMode() ? 'Modifica los permisos o la contraseña.' : 'Completa los datos para dar de alta al personal.' }}
+          </p>
+        </div>
+        
+        <button (click)="cancel()" class="text-white/70 hover:text-white hover:bg-white/20 rounded-full p-1 transition-all">
+          <i class="bi bi-x-lg text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="p-8 bg-white">
+      <form [formGroup]="userForm" (ngSubmit)="onSubmit()" class="space-y-6">
+        
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nombre de Usuario</label>
+          <div class="relative group">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+              <i class="bi bi-person"></i>
+            </div>
+            
+            <input type="text" formControlName="username"
+                   [readonly]="isEditMode()"
+                   class="block w-full pl-10 pr-3 py-3 border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white"
+                   [class.bg-slate-100]="isEditMode()"
+                   [class.cursor-not-allowed]="isEditMode()"
+                   [class.border-red-300]="hasError('username', 'required') || hasError('username', 'minlength')"
+                   placeholder="Ej: operador_piso_1">
+          </div>
+          
+          @if (hasError('username', 'required')) { 
+            <p class="text-red-500 text-xs ml-1 flex items-center gap-1"><i class="bi bi-exclamation-circle"></i> El usuario es obligatorio.</p> 
+          }
+          @if (hasError('username', 'minlength')) { 
+            <p class="text-red-500 text-xs ml-1 flex items-center gap-1"><i class="bi bi-exclamation-circle"></i> Mínimo 4 caracteres.</p> 
+          }
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+            {{ isEditMode() ? 'Nueva Contraseña' : 'Contraseña' }}
+          </label>
+          <div class="relative group">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+              <i class="bi bi-key"></i>
+            </div>
+            <input type="password" formControlName="password"
+                   class="block w-full pl-10 pr-3 py-3 border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white"
+                   [class.border-red-300]="hasError('password', 'required') || hasError('password', 'minlength')"
+                   placeholder="••••••••">
+          </div>
+          
+          @if (isEditMode()) {
+            <p class="text-[10px] text-slate-400 ml-1">
+              <i class="bi bi-info-circle"></i> Déjalo en blanco si no quieres cambiarla.
+            </p>
+          }
+
+          @if (hasError('password', 'required')) { 
+            <p class="text-red-500 text-xs ml-1 flex items-center gap-1"><i class="bi bi-exclamation-circle"></i> La contraseña es requerida.</p> 
+          }
+          @if (hasError('password', 'minlength')) { 
+            <p class="text-red-500 text-xs ml-1 flex items-center gap-1"><i class="bi bi-exclamation-circle"></i> Mínimo 6 caracteres.</p> 
+          }
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Rol y Permisos</label>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <label class="cursor-pointer relative">
+              <input type="radio" formControlName="role" value="OPERATOR" class="peer sr-only">
+              <div class="p-4 rounded-xl border-2 border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-300 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50/50 peer-checked:shadow-sm">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="bi bi-box-seam"></i>
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-700 text-sm">Operador</div>
+                  </div>
+                </div>
+                <div class="absolute top-2 right-2 text-emerald-500 opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <i class="bi bi-check-circle-fill"></i>
+                </div>
+              </div>
+            </label>
+
+            <label class="cursor-pointer relative">
+              <input type="radio" formControlName="role" value="ADMIN" class="peer sr-only">
+              <div class="p-4 rounded-xl border-2 border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-300 transition-all peer-checked:border-indigo-500 peer-checked:bg-indigo-50/50 peer-checked:shadow-sm">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg">
+                    <i class="bi bi-shield-lock"></i>
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-700 text-sm">Administrador</div>
+                  </div>
+                </div>
+                <div class="absolute top-2 right-2 text-indigo-500 opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <i class="bi bi-check-circle-fill"></i>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="pt-6 flex gap-4 border-t border-slate-100 mt-6">
+          <button type="button" (click)="cancel()" 
+                  class="flex-1 py-3.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 hover:text-slate-800 transition-colors">
+            Cancelar
+          </button>
+          
+          <button type="submit" 
+                  [disabled]="userForm.invalid || isSubmitting()"
+                  class="flex-1 py-3.5 rounded-xl text-white font-bold text-sm shadow-lg shadow-indigo-200 hover:shadow-xl transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                  [ngClass]="isEditMode() ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:to-orange-700' : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:to-blue-700'">
+            
+            @if (isSubmitting()) {
+              <span class="border-2 border-white/30 border-t-white rounded-full w-4 h-4 animate-spin"></span>
+            }
+            {{ isEditMode() ? 'Guardar Cambios' : 'Crear Usuario' }}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
