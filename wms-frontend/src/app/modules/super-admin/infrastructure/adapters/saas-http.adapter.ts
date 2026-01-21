@@ -23,4 +23,12 @@ export class SaasHttpAdapter implements SaasRepository {
     onboardCompany(data: OnboardData): Observable<string> {
         return this.http.post(`${this.apiUrl}/onboarding`, data, { responseType: 'text' });
     }
+
+    changeStatus(tenantId: string, isActive: boolean): Observable<void> {
+        const url = `${this.apiUrl}/tenants/${tenantId}/status`;
+        
+        return this.http.patch<void>(url, {}, { 
+            params: { active: isActive.toString() } 
+        });
+    }
 }

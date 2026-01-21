@@ -5,6 +5,7 @@ import { GetTenantsUseCase } from './application/usecases/get-tenants.usecase';
 import { OnboardCompanyUseCase } from './application/usecases/onboard-company.usecase';
 import { OnboardingComponent } from './ui/onboarding/onboarding.component';
 import { TenantListComponent } from './ui/tentat-list/tenant-list.component';
+import { ChangeTenantStatusUseCase } from './application/usecases/change-tenant-status.usecase';
 
 export const SUPER_ADMIN_ROUTES: Routes = [
   {
@@ -12,7 +13,8 @@ export const SUPER_ADMIN_ROUTES: Routes = [
     providers: [
       { provide: SaasRepository, useClass: SaasHttpAdapter },
       GetTenantsUseCase,
-      OnboardCompanyUseCase
+      OnboardCompanyUseCase,
+      ChangeTenantStatusUseCase
     ],
     children: [
       { path: '', redirectTo: 'tenants', pathMatch: 'full' },
