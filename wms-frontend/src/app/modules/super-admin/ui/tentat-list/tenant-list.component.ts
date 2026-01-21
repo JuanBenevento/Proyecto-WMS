@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { GetTenantsUseCase } from '../../application/usecases/get-tenants.usecase';
+import { ChangeTenantStatusUseCase } from '../../application/usecases/change-tenant-status.usecase'; 
 import { Tenant } from '../../domain/models/tenant.model';
 
 @Component({
@@ -49,7 +50,7 @@ import { Tenant } from '../../domain/models/tenant.model';
                     </div>
                     <div>
                       <div class="font-medium text-slate-900">{{ tenant.name }}</div>
-                      </div>
+                    </div>
                   </div>
                 </td>
 
@@ -63,18 +64,34 @@ import { Tenant } from '../../domain/models/tenant.model';
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
                         [ngClass]="tenant.isActive 
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                          : 'bg-slate-100 text-slate-600 border-slate-200'">
+                          : 'bg-red-50 text-red-700 border-red-200'">
                     
                     <span class="w-1.5 h-1.5 rounded-full mr-1.5"
-                          [ngClass]="tenant.isActive ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-                    {{ tenant.isActive ? 'Activo' : 'Inactivo' }}
+                          [ngClass]="tenant.isActive ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                    {{ tenant.isActive ? 'Activo' : 'Suspendido' }}
                   </span>
                 </td>
 
                 <td class="px-6 py-4 whitespace-nowrap text-right">
-                  <button class="text-slate-400 hover:text-indigo-600 font-medium text-sm transition-colors p-2 rounded-full hover:bg-indigo-50">
-                    Gestionar
+                  
+                  <button (click)="toggleStatus(tenant)"
+                          [disabled]="loadingId === tenant.id"
+                          class="group relative inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          [ngClass]="tenant.isActive 
+                              ? 'text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300' 
+                              : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300'">
+                      
+                      <span *ngIf="loadingId === tenant.id" class="absolute flex h-3 w-3">
+                          <span class="animate-spin h-3 w-3 rounded-full border-2 border-current border-t-transparent"></span>
+                      </span>
+
+                      <span class="flex items-center gap-1" [class.opacity-0]="loadingId === tenant.id">
+                          <i class="bi" [ngClass]="tenant.isActive ? 'bi-power' : 'bi-check-circle-fill'"></i>
+                          {{ tenant.isActive ? 'Suspender' : 'Habilitar' }}
+                      </span>
+
                   </button>
+
                 </td>
 
               </tr>
@@ -114,13 +131,44 @@ import { Tenant } from '../../domain/models/tenant.model';
 })
 export class TenantListComponent implements OnInit {
   private getTenantsUC = inject(GetTenantsUseCase);
+  private changeStatusUC = inject(ChangeTenantStatusUseCase); 
   
   tenants: Tenant[] = [];
+  loadingId: string | null = null; 
 
   ngOnInit() {
+    this.loadTenants();
+  }
+
+  loadTenants() {
     this.getTenantsUC.execute().subscribe({
       next: (data) => this.tenants = data,
       error: (err) => console.error('Error al cargar tenants:', err) 
+    });
+  }
+
+  toggleStatus(tenant: Tenant) {
+    const newStatus = !tenant.isActive;
+    
+    const message = newStatus 
+        ? `¿Confirmas REACTIVAR el servicio para ${tenant.name}?` 
+        : `ADVERTENCIA: Estás a punto de SUSPENDER a ${tenant.name}.\n\nSus usuarios perderán el acceso inmediatamente. ¿Continuar?`;
+
+    if (!confirm(message)) return;
+
+    this.loadingId = tenant.id;
+
+    this.changeStatusUC.execute(tenant.id, newStatus).subscribe({
+      next: () => {
+        tenant.isActive = newStatus;
+        this.loadingId = null;
+      },
+      error: (err) => {
+        console.error('Error al cambiar estado', err);
+        alert('Hubo un error al intentar cambiar el estado.');
+        this.loadingId = null;
+        this.loadTenants(); 
+      }
     });
   }
 }
