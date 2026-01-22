@@ -7,6 +7,7 @@ import { OnboardData } from '../../domain/models/onboard-data.model';
 import { SaasMapper } from '../mappers/saas.mapper';
 import { TenantResponseDto } from '../dtos/tenant-response.dto';
 import { environment } from '../../../../../environments/environment';
+import { UpdateTenantCommand } from '../../domain/commands/update-tenant.command';
 
 @Injectable()
 export class SaasHttpAdapter implements SaasRepository {
@@ -30,5 +31,10 @@ export class SaasHttpAdapter implements SaasRepository {
         return this.http.patch<void>(url, {}, { 
             params: { active: isActive.toString() } 
         });
+    }
+
+    updateTenant(tenantId: string, data: UpdateTenantCommand): Observable<void> {
+        const url = `${this.apiUrl}/tenants/${tenantId}`;
+        return this.http.put<void>(url, data);
     }
 }
