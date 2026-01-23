@@ -21,7 +21,7 @@ export class InventoryApiAdapter extends InventoryRepository {
   }
 
   getAll(): Observable<InventoryItemModel[]> {
-    return this.http.get<InventoryItemResponseDto[]>(this.INV_URL).pipe(
+    return this.http.get<InventoryItemResponseDto[]>(`${this.INV_URL}/getAll`).pipe(
       map(dtos => dtos.map(dto => InventoryMapper.toDomain(dto)))
     );
   }

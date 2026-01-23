@@ -6,7 +6,10 @@ export interface MenuItem {
 }
 
 export const SAAS_MENU: MenuItem[] = [
-  { category: 'Plataforma', label: 'Empresas (Tenants)', icon: 'bi-buildings-fill', route: '/saas/tenants' } 
+  { category: 'Plataforma', 
+    label: 'Empresas', 
+    icon: 'bi-buildings-fill', 
+    route: '/saas/tenants' } 
 ];
 
 export const ADMIN_MENU: MenuItem[] = [
@@ -17,7 +20,7 @@ export const ADMIN_MENU: MenuItem[] = [
     route: '/admin/dashboard' 
   },
 
-  // Operativa Diaria (Mismos componentes que el operador)
+  // Operativa Diaria 
   { 
     category: 'Operativa Diaria', 
     label: 'Recepción (Inbound)', 
@@ -71,6 +74,6 @@ export const OPERATOR_MENU: MenuItem[] = [
   { category: 'Tareas', label: 'Recepción', icon: 'bi-box-arrow-in-down', route: '/operation/receive' },
   { label: 'Movimientos', icon: 'bi-arrows-move', route: '/operation/move' },
   { label: 'Despacho', icon: 'bi-truck', route: '/operation/dispatch' },
-  { category: 'Control de Stock', label: 'Stock Actual', icon: 'bi-box-seam-fill', route: '/admin/inventory' }
+  { category: 'Control de Stock', label: 'Stock Actual', icon: 'bi-box-seam-fill', route: '/operation/inventory' }
 
 ];
