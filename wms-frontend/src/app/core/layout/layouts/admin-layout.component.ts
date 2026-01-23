@@ -13,7 +13,7 @@ import { MainLayoutComponent } from './main-layout.component';
         [menu]="menu" 
         appTitle="WMS Enterprise" 
         appSubtitle="Panel de Administración"
-        sidebarTheme="light">
+        sidebarTheme="dark">
         
         <router-outlet></router-outlet>
 

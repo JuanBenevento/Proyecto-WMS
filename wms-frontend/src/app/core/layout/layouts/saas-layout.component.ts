@@ -11,7 +11,7 @@ import { MainLayoutComponent } from './main-layout.component';
     <app-main-layout 
         [menu]="menu" 
         appTitle="WMS Master Control" 
-        appSubtitle="Gestión de Tenants (SaaS)"
+        appSubtitle="Gestión de clientes (SaaS)"
         sidebarTheme="dark"> 
         
         <router-outlet></router-outlet>

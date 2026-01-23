@@ -1,0 +1,39 @@
+<header class="h-16 flex-none bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 z-40">
+      
+    <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+             <i class="bi bi-box-seam-fill text-sm"></i>
+        </div>
+        <div class="flex flex-col">
+            <span class="font-bold text-lg tracking-tight text-white leading-none">
+                {{ softwareName }}
+            </span>
+            <span *ngIf="subtitle" class="text-[10px] text-slate-400 font-medium uppercase tracking-wide">
+                {{ subtitle }}
+            </span>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-6">
+        
+        <div class="hidden md:flex flex-col items-end text-xs text-slate-400 border-r pr-6 border-slate-700">
+            <span class="font-bold text-slate-200">{{ currentDate | date:'HH:mm:ss' }}</span>
+            <span>{{ currentDate | date:'fullDate' }}</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+                <p class="text-sm font-bold text-white leading-none mb-1">
+                    {{ auth.currentUser()?.username || 'Usuario' }}
+                </p>
+                <button (click)="auth.logout()" class="text-xs font-medium text-red-400 hover:text-red-300 flex items-center justify-end gap-1 ml-auto transition-colors">
+                    Cerrar sesión <i class="bi bi-box-arrow-right"></i>
+                </button>
+            </div>
+            
+            <div class="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">
+                {{ auth.currentUser()?.username?.charAt(0) | uppercase }}
+            </div>
+        </div>
+    </div>
+</header>
