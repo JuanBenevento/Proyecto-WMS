@@ -33,8 +33,8 @@ public class InventoryController {
     private final SuggestLocationUseCase suggestLocationUseCase;
 
     @Operation(summary = "Ver stock real", description = "Lista todos los items con su LPN y estado.")
-    @GetMapping
-    
+    @GetMapping("/getAll")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
     public ResponseEntity<List<InventoryItemResponse>> getAllInventory() {
         return ResponseEntity.ok(retrieveInventoryUseCase.getAllInventory());
     }

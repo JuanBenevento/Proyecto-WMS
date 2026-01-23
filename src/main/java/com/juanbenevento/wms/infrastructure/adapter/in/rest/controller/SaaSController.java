@@ -1,6 +1,7 @@
 package com.juanbenevento.wms.infrastructure.adapter.in.rest.controller;
 
 import com.juanbenevento.wms.application.ports.in.command.OnboardCompanyCommand;
+import com.juanbenevento.wms.application.ports.in.command.UpdateTenantCommand;
 import com.juanbenevento.wms.application.ports.in.dto.TenantResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageSaaSUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,6 +46,31 @@ public class SaaSController {
         return ResponseEntity.ok("Empresa " + request.companyName() + " registrada exitosamente.");
     }
 
+    @PatchMapping("/tenants/{id}/status")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @Operation(summary = "Cambiar Estado", description = "Activa o suspende el servicio de un tenant.")
+    public ResponseEntity<Void> toggleTenantStatus(
+            @PathVariable String id,
+            @RequestParam boolean active
+    ) {
+        saasUseCase.toggleTenantStatus(id, active);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/tenants/{id}")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @Operation(summary = "Editar Información", description = "Modifica nombre y contacto de la empresa.")
+    public ResponseEntity<Void> updateTenant(
+            @PathVariable String id,
+            @RequestBody @Valid UpdateTenantRequest request
+    ) {
+        UpdateTenantCommand command = new UpdateTenantCommand(request.name(), request.contactEmail());
+
+        saasUseCase.updateTenant(id, command);
+
+        return ResponseEntity.noContent().build();
+    }
+
     // DTO Web Local (Input) con Validaciones
     public record OnboardRequest(
             @Schema(example = "Logística Global S.A.") @NotBlank(message = "El nombre es obligatorio")
@@ -61,5 +87,10 @@ public class SaaSController {
 
             @Schema(example = "Secret.123") @NotBlank
             String adminPassword
+    ) {}
+
+    public record UpdateTenantRequest(
+            @NotBlank(message = "El nombre es obligatorio") String name,
+            @NotBlank(message = "El email es obligatorio") @Email String contactEmail
     ) {}
 }

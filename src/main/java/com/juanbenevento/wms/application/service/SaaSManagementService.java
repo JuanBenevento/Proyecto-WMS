@@ -2,10 +2,12 @@ package com.juanbenevento.wms.application.service;
 
 import com.juanbenevento.wms.application.mapper.TenantMapper;
 import com.juanbenevento.wms.application.ports.in.command.OnboardCompanyCommand;
+import com.juanbenevento.wms.application.ports.in.command.UpdateTenantCommand;
 import com.juanbenevento.wms.application.ports.in.dto.TenantResponse;
 import com.juanbenevento.wms.application.ports.in.usecases.ManageSaaSUseCase;
 import com.juanbenevento.wms.application.ports.out.TenantRepositoryPort;
 import com.juanbenevento.wms.application.ports.out.UserRepositoryPort;
+import com.juanbenevento.wms.domain.exception.DomainException;
 import com.juanbenevento.wms.domain.exception.TenantAlreadyExistsException;
 import com.juanbenevento.wms.domain.exception.UserAlreadyExistsException;
 import com.juanbenevento.wms.domain.model.Role;
@@ -38,7 +40,6 @@ public class SaaSManagementService implements ManageSaaSUseCase {
     @Override
     @Transactional
     public void onboardNewCustomer(OnboardCompanyCommand command) {
-        // 1. Validaciones de Unicidad
         if (tenantRepository.existsById(command.companyId())) {
             throw new TenantAlreadyExistsException(command.companyId());
         }
@@ -46,7 +47,6 @@ public class SaaSManagementService implements ManageSaaSUseCase {
             throw new UserAlreadyExistsException(command.adminUsername());
         }
 
-        // 2. Crear Tenant (Dominio Rico)
         Tenant tenant = Tenant.create(
                 command.companyId(),
                 command.companyName(),
@@ -54,13 +54,41 @@ public class SaaSManagementService implements ManageSaaSUseCase {
         );
         tenantRepository.save(tenant);
 
-        // 3. Crear Usuario Admin Inicial (Dominio Rico)
         User adminUser = User.create(
                 command.adminUsername(),
-                passwordEncoder.encode(command.adminPassword()), // Servicio encripta, Dominio guarda
+                passwordEncoder.encode(command.adminPassword()),
                 Role.ADMIN,
-                tenant.getId() // Linkeado al tenant creado
+                tenant.getId()
         );
         userRepository.save(adminUser);
+    }
+
+    @Override
+    @Transactional
+    public void toggleTenantStatus(String tenantId, boolean isActive) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new DomainException("Tenant no encontrado con ID: " + tenantId));
+
+        if (isActive) {
+            tenant.activate();
+        } else {
+            tenant.suspend();
+        }
+
+        tenantRepository.save(tenant);
+    }
+
+    @Override
+    @Transactional
+    public void updateTenant(String tenantId, UpdateTenantCommand command) {
+        // 1. Buscar
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new DomainException("No se encontró el tenant con ID: " + tenantId));
+
+        // 2. Modificar (El dominio se encarga de validar)
+        tenant.updateInfo(command.name(), command.contactEmail());
+
+        // 3. Guardar
+        tenantRepository.save(tenant);
     }
 }
