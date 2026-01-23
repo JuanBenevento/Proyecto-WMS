@@ -22,18 +22,17 @@ public class Tenant {
         validateState();
     }
 
-    // Factory Method: Creación limpia
+    // Factory Method: Creacion limpia
     public static Tenant create(String id, String name, String email) {
         return new Tenant(
-                id.toUpperCase(), // Regla de negocio: IDs en mayúsculas
+                id.toUpperCase(),
                 name,
-                TenantStatus.ACTIVE, // Por defecto nacen activos
+                TenantStatus.ACTIVE,
                 email,
                 LocalDateTime.now()
         );
     }
 
-    // Comportamiento
     public void suspend() {
         this.status = TenantStatus.SUSPENDED;
     }
@@ -45,5 +44,17 @@ public class Tenant {
     private void validateState() {
         if (id == null || id.isBlank()) throw new DomainException("El ID de la empresa es obligatorio");
         if (name == null || name.isBlank()) throw new DomainException("El nombre de la empresa es obligatorio");
+    }
+
+    public void updateInfo(String newName, String newEmail) {
+        if (newName == null || newName.isBlank()) {
+            throw new DomainException("El nombre de la empresa no puede estar vacío.");
+        }
+        if (newEmail == null || newEmail.isBlank()) {
+            throw new DomainException("El email de contacto no puede estar vacío.");
+        }
+
+        this.name = newName;
+        this.contactEmail = newEmail;
     }
 }
