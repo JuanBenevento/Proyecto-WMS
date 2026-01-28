@@ -9,8 +9,10 @@ import java.util.Optional;
 
 @Getter
 public class Location {
-
     private final String locationCode;
+    private final String aisle;
+    private final String column;
+    private final String level;
     private final ZoneType zoneType;
     private final Double maxWeight;
     private final Double maxVolume;
@@ -19,24 +21,46 @@ public class Location {
     private Double currentVolume;
     private final Long version;
 
-    public Location(String locationCode, ZoneType zoneType, Double maxWeight, Double maxVolume,
+    public Location(String locationCode,
+                    String aisle, String column, String level,
+                    ZoneType zoneType, Double maxWeight, Double maxVolume,
                     List<InventoryItem> items, Long version) {
         this.locationCode = locationCode;
+        this.aisle = aisle;
+        this.column = column;
+        this.level = level;
         this.zoneType = zoneType;
         this.maxWeight = maxWeight;
         this.maxVolume = maxVolume;
         this.items = (items != null) ? new ArrayList<>(items) : new ArrayList<>();
         this.version = version;
+
         recalculateTotals();
     }
 
-    // --- FACTORY METHOD (DDD) ---
-    // Permite crear ubicaciones nuevas de forma semántica sin pasar nulls manualmente
-    public static Location createEmpty(String locationCode, ZoneType zoneType, Double maxWeight, Double maxVolume) {
-        return new Location(locationCode, zoneType, maxWeight, maxVolume, new ArrayList<>(), null);
+    // --- FACTORY METHODS (DDD) ---
+    public static Location createRackPosition(String code, String aisle, String col, String level,
+                                              ZoneType zone, Double maxW, Double maxV) {
+        return new Location(code, aisle, col, level, zone, maxW, maxV, new ArrayList<>(), null);
     }
 
-    // --- LÓGICA DE NEGOCIO ---
+    public static Location createOperationalArea(String code, ZoneType zone, Double maxW, Double maxV) {
+        return new Location(code, null, null, "FLOOR", zone, maxW, maxV, new ArrayList<>(), null);
+    }
+
+    // --- LÓGICA DE NEGOCIO Y COMPORTAMIENTO ---
+
+    public boolean isOperational() {
+        return zoneType == ZoneType.RECEIVING_AREA ||
+                zoneType == ZoneType.DISPATCH_AREA ||
+                zoneType == ZoneType.DOCK_DOOR ||
+                zoneType == ZoneType.PICKING_AREA ||
+                zoneType == ZoneType.YARD;
+    }
+
+    public boolean isStorage() {
+        return !isOperational();
+    }
 
     public void consolidateLoad(InventoryItem newItem) {
         Double incomingWeight = newItem.calculateTotalWeight();
@@ -67,16 +91,14 @@ public class Location {
     }
 
     public void releaseLoad(InventoryItem item) {
-        Double weightToRelease = item.calculateTotalWeight();
-        Double volumeToRelease = item.calculateTotalVolume();
+        boolean removed = this.items.removeIf(i -> i.getLpn().equals(item.getLpn()));
 
-        this.items.removeIf(i -> i.getLpn().equals(item.getLpn()));
-
-        this.currentWeight = Math.max(0.0, this.currentWeight - weightToRelease);
-        this.currentVolume = Math.max(0.0, this.currentVolume - volumeToRelease);
-
-        recalculateTotals();
+        if (removed) {
+            recalculateTotals();
+        }
     }
+
+    // --- MÉTODOS PRIVADOS DE SOPORTE ---
 
     private boolean hasSpaceFor(Double extraWeight, Double extraVolume) {
         return (this.currentWeight + extraWeight <= this.maxWeight) &&

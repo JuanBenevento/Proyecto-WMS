@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,15 +31,27 @@ class PickingServiceTest {
     void shouldSplitInventoryWhenAllocationIsPartial() {
         // GIVEN
         String sku = "SKU-A";
-        String locCode = "A-01";
+        String locCode = "A-01-01"; // Usamos formato granular correcto
 
+        // Producto dummy
         Product product = new Product(UUID.randomUUID(), sku, "P", "D", new Dimensions(1.0,1.0,1.0, 1.0), 1L);
 
-        InventoryItem originalItem = new InventoryItem("LPN-ORIGINAL", sku, product, 10.0, "B1", LocalDate.now(), InventoryStatus.AVAILABLE, locCode, 1L);
+        // Item Original: 10 unidades
+        InventoryItem originalItem = new InventoryItem(
+                "LPN-ORIGINAL", sku, product, 10.0, "B1",
+                LocalDate.now(), InventoryStatus.AVAILABLE, locCode, 1L
+        );
 
-        Location location = Location.createEmpty(locCode, ZoneType.DRY_STORAGE, 100.0, 100.0);
+        // Ubicación Mock: Usamos la Factory de Rack
+        Location location = Location.createRackPosition(
+                locCode, "A", "01", "01",
+                ZoneType.DRY_STORAGE, 100.0, 100.0
+        );
+
+        // Cargamos el item en la ubicación para que el estado sea consistente
         location.consolidateLoad(originalItem);
 
+        // Mocks
         when(inventoryRepository.findAvailableStockForAllocation(sku)).thenAnswer(inv -> {
             List<InventoryItem> list = new java.util.ArrayList<>();
             list.add(originalItem);
@@ -49,10 +60,12 @@ class PickingServiceTest {
 
         when(locationRepository.findByCode(locCode)).thenReturn(Optional.of(location));
 
+        // Verificación de comportamiento en el save
         doAnswer(invocation -> {
             InventoryItem itemGuardado = invocation.getArgument(0);
 
             if (itemGuardado.getLpn().equals("LPN-ORIGINAL")) {
+                // Si pedimos 4, al original le deben quedar 6
                 if (itemGuardado.getQuantity() != 6.0) {
                     throw new RuntimeException("TEST FALLIDO: El servicio intentó guardar LPN-ORIGINAL con cantidad " + itemGuardado.getQuantity() + " (Se esperaba 6.0)");
                 }
@@ -60,10 +73,11 @@ class PickingServiceTest {
             return itemGuardado;
         }).when(inventoryRepository).save(any(InventoryItem.class));
 
-        // WHEN
+        // WHEN: Pedimos 4 unidades
         pickingService.allocateStock(new AllocateStockCommand(sku, 4.0));
 
         // THEN
+        // Debe guardar el original (actualizado a 6) y el nuevo (creado con 4)
         verify(inventoryRepository, atLeast(2)).save(any());
     }
 }

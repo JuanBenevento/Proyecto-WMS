@@ -61,6 +61,13 @@ public class LocationController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Obtener ubicación por código")
+    @GetMapping("/{code}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<LocationResponse> getLocationByCode(@PathVariable String code) {
+        return ResponseEntity.ok(manageLocationUseCase.getLocationByCode(code));
+    }
+
     // DTO Local
     public record CreateLocationRequest(
             @Schema(example = "A-01-01-1") @NotBlank String locationCode,

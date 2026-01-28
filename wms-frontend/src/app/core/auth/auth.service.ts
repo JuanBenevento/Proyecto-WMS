@@ -49,16 +49,25 @@ export class AuthService {
   private decodeAndSetUser(token: string) {
     try {
       const decoded: any = jwtDecode(token);
+        
       if (decoded.exp * 1000 < Date.now()) {
         this.logout();
         return;
       }
+
+      let cleanRole = decoded.role;
+      if (cleanRole && typeof cleanRole === 'string') {
+        cleanRole = cleanRole.replace('ROLE_', '');
+      }
+
       this._currentUser.set({
-        username: decoded.sub,
-        role: decoded.role as UserRole,
-        tenantId: decoded.tenantId,
-        token: token
-      });
+      username: decoded.sub,
+      role: cleanRole as UserRole, 
+      tenantId: decoded.tenantId,
+      token: token
+    });
+
+
     } catch (e) {
       this.logout();
     }

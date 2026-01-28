@@ -1,0 +1,85 @@
+<div class="flex h-[calc(100vh-140px)] w-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm font-sans select-none relative">
+    
+    <div class="flex-none w-20 bg-slate-50 border-r border-slate-200 flex flex-col items-center py-4 gap-4 z-20">
+        
+        <button (click)="setMode('SELECT')"
+                [class.bg-indigo-100]="store.interactionMode() === 'SELECT'"
+                [class.text-indigo-700]="store.interactionMode() === 'SELECT'"
+                [class.border-indigo-200]="store.interactionMode() === 'SELECT'"
+                [class.border]="store.interactionMode() === 'SELECT'"
+                class="w-10 h-10 rounded-lg hover:bg-slate-200 flex items-center justify-center transition-all duration-200"
+                title="Seleccionar / Mover (V)">
+            <i class="bi bi-cursor-fill"></i>
+        </button>
+
+        <div class="w-8 border-b border-slate-200"></div>
+
+        <button (click)="setMode('DRAW_WALL')"
+                [class.bg-slate-200]="store.interactionMode() === 'DRAW_WALL'"
+                [class.text-slate-800]="store.interactionMode() === 'DRAW_WALL'"
+                [class.shadow-inner]="store.interactionMode() === 'DRAW_WALL'"
+                class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-slate-200 transition-all cursor-pointer group"
+                title="Herramienta de Muro (W)">
+            <div class="w-9 h-9 flex items-center justify-center bg-white border border-slate-300 rounded shadow-sm group-hover:border-slate-400">
+                <i class="bi bi-bricks text-slate-600"></i>
+            </div>
+            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Muro</span>
+        </button>
+
+        <div class="w-8 border-b border-slate-200"></div>
+
+        <div class="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing group"
+             draggable="true" (dragstart)="onDragStart($event, 'RACK')">
+            <div class="w-10 h-10 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center justify-center group-hover:border-indigo-400 group-hover:shadow-md transition-all shadow-sm">
+                <i class="bi bi-grid-3x3 text-indigo-600 text-lg"></i>
+            </div>
+            <span class="text-[9px] font-bold text-slate-500 group-hover:text-indigo-600 transition-colors">Rack</span>
+        </div>
+
+        <div class="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing group"
+             draggable="true" (dragstart)="onDragStart($event, 'ZONE')">
+            <div class="w-10 h-10 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-center group-hover:border-emerald-400 group-hover:shadow-md transition-all shadow-sm">
+                <i class="bi bi-bounding-box text-emerald-600 text-lg"></i>
+            </div>
+            <span class="text-[9px] font-bold text-slate-500 group-hover:text-emerald-600 transition-colors">Zona</span>
+        </div>
+
+        <div class="mt-auto">
+             <button (click)="saveDesign()" 
+                     class="w-10 h-10 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 shadow-lg hover:shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center" 
+                     title="Guardar Diseño">
+                <i class="bi bi-cloud-upload-fill"></i>
+             </button>
+        </div>
+    </div>
+
+    <div id="canvas-container" 
+         class="flex-1 relative bg-white overflow-hidden cursor-crosshair"
+         (dragover)="onDragOver($event)" 
+         (drop)="onDrop($event)">
+        
+        <canvas id="mainCanvas"></canvas>
+        
+        <div class="absolute top-4 left-4 pointer-events-none flex flex-col gap-2 animate-fadeIn">
+            
+            <div class="px-3 py-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-slate-200 flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full" 
+                     [class.bg-indigo-500]="store.interactionMode() === 'SELECT'"
+                     [class.bg-orange-500]="store.interactionMode() === 'DRAW_WALL'">
+                </div>
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    {{ store.interactionMode() === 'SELECT' ? 'Modo Selección' : 'Construyendo Muros' }}
+                </span>
+            </div>
+
+            <div class="px-3 py-1 bg-white/80 backdrop-blur rounded-lg border border-slate-100 text-[10px] text-slate-500 font-medium">
+               <i class="bi bi-mouse me-1"></i> Alt + Click para mover el plano
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-none w-72 bg-white border-l border-slate-200 z-20 h-full overflow-y-auto">
+        <app-property-inspector></app-property-inspector>
+    </div>
+
+</div>
