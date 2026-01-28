@@ -9,6 +9,11 @@ import { SuggestLocationUseCase } from './modules/inventory/application/usecases
 import { AllocateStockUseCase } from './modules/inventory/application/usecases/outbound/allocate-stock.usecase';
 import { ShipStockUseCase } from './modules/inventory/application/usecases/outbound/ship-stock.usecase';
 import { GetInventoryUseCase } from './modules/inventory/application/usecases/query/get-inventory.usecase';
+import { GetLayoutUseCase } from './modules/warehouse/application/usecases/get-layout.usecase';
+import { SaveLayoutUseCase } from './modules/warehouse/application/usecases/save-layout.usecase';
+import { LayoutRepository } from './modules/warehouse/domain/repositories/layout.repository';
+import { LayoutHttpRepository } from './modules/warehouse/infrastructure/repositories/layout-http.repository';
+import { GetRackSummaryUseCase } from './modules/warehouse/application/usecases/get-rack-summary.usecase';
 
 
 const INVENTORY_PROVIDERS = [
@@ -19,6 +24,13 @@ const INVENTORY_PROVIDERS = [
   AllocateStockUseCase,
   ShipStockUseCase,
   GetInventoryUseCase
+];
+
+const WAREHOUSE_PROVIDERS = [
+  { provide: LayoutRepository, useClass: LayoutHttpRepository},
+  GetLayoutUseCase,
+  SaveLayoutUseCase,
+  GetRackSummaryUseCase
 ];
 
 export const routes: Routes = [
@@ -42,11 +54,15 @@ export const routes: Routes = [
     loadComponent: () => import('./core/layout/layouts/admin-layout.component').then(m => m.AdminLayoutComponent),
     canActivate: [authGuard, roleGuard],
     data: { role: 'ADMIN' }, 
-    providers: [...INVENTORY_PROVIDERS],
+    providers: [...INVENTORY_PROVIDERS, ...WAREHOUSE_PROVIDERS],
     children: [
       { 
         path: 'dashboard', 
-        loadComponent: () => import('./modules/warehouse/ui/warehouse-map/warehouse-map.component').then(m => m.WarehouseMapComponent) 
+        loadComponent: () => import('./modules/warehouse/ui/pages/monitor-page/monitor-page.component').then(m => m.MonitorPageComponent) 
+      },
+      {
+        path: 'warehouse',
+        loadChildren: () => import('./modules/warehouse/warehouse.routes').then(m => m.WAREHOUSE_ROUTES)
       },
       { 
         path: 'products', 

@@ -51,7 +51,7 @@ public class InboundService implements ReceiveInventoryUseCase {
                 command.expiryDate(),
                 InventoryStatus.IN_QUALITY_CHECK,
                 command.locationCode(),
-                null // Version
+                null
         );
 
         location.consolidateLoad(newItem);

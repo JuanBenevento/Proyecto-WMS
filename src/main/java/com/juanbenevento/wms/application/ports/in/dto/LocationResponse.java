@@ -4,6 +4,9 @@ import java.util.List;
 
 public record LocationResponse(
         String locationCode,
+        String aisle,
+        String column,
+        String level,
         String zoneType,
         Double maxWeight,
         Double currentWeight,

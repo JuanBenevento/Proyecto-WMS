@@ -13,6 +13,13 @@ public interface SpringDataLocationRepository extends JpaRepository<LocationEnti
 
     Optional<LocationEntity> findByLocationCode(String locationCode);
 
+    @Query("SELECT l FROM LocationEntity l WHERE UPPER(l.locationCode) LIKE UPPER(CONCAT(:prefix, '%'))")
+    List<LocationEntity> findByCodeStartingWith(@Param("prefix") String prefix);
+
+    // 2. Heatmap: Busca los hijos de un Rack (ej: "A-01" -> "A-01-01")
+    @Query("SELECT l FROM LocationEntity l WHERE l.locationCode LIKE CONCAT(:rackCode, '-%')")
+    List<LocationEntity> findChildrenOfRack(@Param("rackCode") String rackCode);
+
     @Query("""
         SELECT l FROM LocationEntity l
         WHERE l.zoneType = :zone

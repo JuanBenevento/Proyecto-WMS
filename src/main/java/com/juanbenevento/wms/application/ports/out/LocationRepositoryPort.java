@@ -13,4 +13,6 @@ public interface LocationRepositoryPort {
     void delete(String locationCode);
     boolean hasInventory(String locationCode);
     List<Location> findAvailableLocations(ZoneType zone, Double weightNeeded, Double volumeNeeded);
+    List<Location> findByCodeStartingWith(String prefix); // Para el Search
+    List<Location> findChildrenOfRack(String rackCode);
 }

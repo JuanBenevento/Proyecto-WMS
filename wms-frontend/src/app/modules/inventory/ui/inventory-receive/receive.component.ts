@@ -12,13 +12,11 @@ import Swal from 'sweetalert2';
 })
 export class InventoryReceiveComponent {
   private fb = inject(FormBuilder);
-  // Inyectamos el Caso de Uso (Lógica Pura), no el Servicio HTTP directo
   private receiveUseCase = inject(ReceiveInventoryUseCase);
   
   isLoading = false;
   lastLpn: string | null = null;
 
-  // Formulario con validadores
   form: FormGroup = this.fb.group({
     productSku: ['', Validators.required],
     quantity: [1, [Validators.required, Validators.min(1)]],

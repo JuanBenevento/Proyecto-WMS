@@ -1,17 +1,18 @@
 package com.juanbenevento.wms.infrastructure.adapter.out.persistence.adapter;
 
 import com.juanbenevento.wms.application.mapper.InventoryMapper;
-import com.juanbenevento.wms.application.mapper.LocationMapper;
 import com.juanbenevento.wms.application.ports.out.LocationRepositoryPort;
 import com.juanbenevento.wms.domain.model.InventoryItem;
 import com.juanbenevento.wms.domain.model.Location;
 import com.juanbenevento.wms.domain.model.ZoneType;
 import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entity.LocationEntity;
+import com.juanbenevento.wms.infrastructure.adapter.out.persistence.mapper.LocationPersistenceMapper;
 import com.juanbenevento.wms.infrastructure.adapter.out.persistence.repository.SpringDataInventoryRepository;
 import com.juanbenevento.wms.infrastructure.adapter.out.persistence.repository.SpringDataLocationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -22,7 +23,7 @@ public class LocationPersistenceAdapter implements LocationRepositoryPort {
 
     private final SpringDataLocationRepository locationRepository;
     private final SpringDataInventoryRepository inventoryRepository;
-    private final LocationMapper mapper;
+    private final LocationPersistenceMapper mapper;
     private final InventoryMapper mapperInventory;
 
     @Override
@@ -62,6 +63,20 @@ public class LocationPersistenceAdapter implements LocationRepositoryPort {
                 .stream()
                 .map(this::hydrateLocation)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Location> findByCodeStartingWith(String prefix) {
+        return locationRepository.findByCodeStartingWith(prefix).stream()
+                .map(mapper::toLocationDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Location> findChildrenOfRack(String rackCode) {
+        return locationRepository.findChildrenOfRack(rackCode).stream()
+                .map(entity -> mapper.toLocationDomain(entity, Collections.emptyList()))
+                .toList();
     }
 
     private Location hydrateLocation(LocationEntity entity) {

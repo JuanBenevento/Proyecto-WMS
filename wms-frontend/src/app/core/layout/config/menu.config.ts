@@ -14,8 +14,8 @@ export const SAAS_MENU: MenuItem[] = [
 
 export const ADMIN_MENU: MenuItem[] = [
   { 
-    category: 'Resumen', 
-    label: 'Dashboard', 
+    category: 'General', 
+    label: 'Mapa Físico Depósito', 
     icon: 'bi-speedometer2', 
     route: '/admin/dashboard' 
   },
@@ -54,6 +54,11 @@ export const ADMIN_MENU: MenuItem[] = [
   // Maestros
   { 
     category: 'Maestros y Configuración', 
+    label: 'Diseño de Depósito',  
+    icon: 'bi-map-fill',          
+    route: '/admin/warehouse/designer'
+  },
+  { 
     label: 'Productos', 
     icon: 'bi-tags-fill', 
     route: '/admin/products' 
@@ -75,5 +80,4 @@ export const OPERATOR_MENU: MenuItem[] = [
   { label: 'Movimientos', icon: 'bi-arrows-move', route: '/operation/move' },
   { label: 'Despacho', icon: 'bi-truck', route: '/operation/dispatch' },
   { category: 'Control de Stock', label: 'Stock Actual', icon: 'bi-box-seam-fill', route: '/operation/inventory' }
-
 ];

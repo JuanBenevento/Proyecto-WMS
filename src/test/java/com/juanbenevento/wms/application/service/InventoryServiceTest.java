@@ -36,19 +36,23 @@ class InventoryServiceTest {
     @Mock private InventoryMapper mapper;
 
     @InjectMocks
-    private InternalOperationsService inventoryService;
+    private InternalOperationsService internalOperationsService; // Renombrado para claridad
     @InjectMocks
     private InboundService inboundService;
 
     @Test
     void shouldReceiveInventorySuccessfully() {
+        // GIVEN
         String sku = "TV-LG-65";
         String locationCode = "A-01-01";
         ReceiveInventoryCommand command = new ReceiveInventoryCommand(sku, 10.0, locationCode, "BATCH-001", LocalDate.now().plusYears(1));
 
         Product mockProduct = new Product(UUID.randomUUID(), sku, "TV", "Desc", new Dimensions(10.0,10.0,10.0,5.0), 1L);
 
-        Location mockLocation = Location.createEmpty(locationCode, ZoneType.DRY_STORAGE, 100000.0, 100000.0);
+        Location mockLocation = Location.createRackPosition(
+                locationCode, "A", "01", "01",
+                ZoneType.DRY_STORAGE, 100000.0, 100000.0
+        );
 
         when(productRepository.findBySku(sku)).thenReturn(Optional.of(mockProduct));
         when(locationRepository.findByCode(locationCode)).thenReturn(Optional.of(mockLocation));
@@ -65,29 +69,27 @@ class InventoryServiceTest {
     @Test
     void shouldMovePhysicalLoad_WhenPutAwayLocationChanges() {
         String lpn = "LPN-123";
-        String oldLocCode = "DOCK";
-        String newLocCode = "A-01";
+        String oldLocCode = "DOCK-01"; // Zona Operativa (Muelle)
+        String newLocCode = "A-01-01"; // Zona Almacenamiento (Rack)
         double quantity = 10.0;
 
-        Product product = new Product(UUID.randomUUID(), "SKU-1", "P", "D", new Dimensions(1.0,1.0,1.0, 5.0), 1L);
+        Product product = new Product(UUID.randomUUID(), "SKU-1", "P", "D", new Dimensions(1.0,1.0,1.0, 5.0), 1L); // 5kg unitario
 
         InventoryItem item = new InventoryItem(lpn, "SKU-1", product, quantity, "B1", LocalDate.now(), InventoryStatus.IN_QUALITY_CHECK, oldLocCode, 1L);
 
-        Location oldLoc = Location.createEmpty(oldLocCode, ZoneType.DOCK_DOOR, 1000.0, 1000.0);
+        Location oldLoc = Location.createOperationalArea(oldLocCode, ZoneType.DOCK_DOOR, 1000.0, 1000.0);
         oldLoc.consolidateLoad(item);
 
-        Location newLoc = Location.createEmpty(newLocCode, ZoneType.DRY_STORAGE, 1000.0, 1000.0);
+        Location newLoc = Location.createRackPosition(newLocCode, "A", "01", "01", ZoneType.DRY_STORAGE, 1000.0, 1000.0);
 
         when(inventoryRepository.findByLpn(lpn)).thenReturn(Optional.of(item));
         when(locationRepository.findByCode(oldLocCode)).thenReturn(Optional.of(oldLoc));
         when(locationRepository.findByCode(newLocCode)).thenReturn(Optional.of(newLoc));
 
-        // Ejecución
-        inventoryService.putAwayInventory(new PutAwayInventoryCommand(lpn, newLocCode));
+        internalOperationsService.putAwayInventory(new PutAwayInventoryCommand(lpn, newLocCode));
 
-        // Verificación
         assertEquals(0.0, oldLoc.getCurrentWeight(), "El peso debió salir del DOCK");
-        assertEquals(50.0, newLoc.getCurrentWeight(), "El peso debió entrar en A-01 (10u * 5kg)");
+        assertEquals(50.0, newLoc.getCurrentWeight(), "El peso debió entrar en A-01-01 (10u * 5kg)");
         assertEquals(InventoryStatus.AVAILABLE, item.getStatus(), "El estado debió cambiar a AVAILABLE");
 
         verify(locationRepository, times(2)).save(any(Location.class));
@@ -96,21 +98,22 @@ class InventoryServiceTest {
     @Test
     void shouldProcessAdjustmentAndPublishEvent() {
         String lpn = "LPN-TEST";
-        InventoryAdjustmentCommand command = new InventoryAdjustmentCommand(lpn, 8.0, "Rotura");
+        String locCode = "A-01-01";
+        InventoryAdjustmentCommand command = new InventoryAdjustmentCommand(lpn, 8.0, "Rotura"); // Ajuste de 10 a 8
 
-        Product product = new Product(UUID.randomUUID(), "SKU-1", "P", "D", new Dimensions(1.0,1.0,1.0, 1.0), 1L);
-        InventoryItem item = new InventoryItem(lpn, "SKU-1", product, 10.0, "B1", LocalDate.now(), InventoryStatus.AVAILABLE, "A-01", 1L);
+        Product product = new Product(UUID.randomUUID(), "SKU-1", "P", "D", new Dimensions(1.0,1.0,1.0, 1.0), 1L); // 1kg unitario
+        InventoryItem item = new InventoryItem(lpn, "SKU-1", product, 10.0, "B1", LocalDate.now(), InventoryStatus.AVAILABLE, locCode, 1L);
 
-        Location loc = Location.createEmpty("A-01", ZoneType.DRY_STORAGE, 1000.0, 1000.0);
+        Location loc = Location.createRackPosition(locCode, "A", "01", "01", ZoneType.DRY_STORAGE, 1000.0, 1000.0);
         loc.consolidateLoad(item);
 
         when(inventoryRepository.findByLpn(lpn)).thenReturn(Optional.of(item));
-        when(locationRepository.findByCode("A-01")).thenReturn(Optional.of(loc));
+        when(locationRepository.findByCode(locCode)).thenReturn(Optional.of(loc));
 
-        inventoryService.processInventoryAdjustment(command);
+        internalOperationsService.processInventoryAdjustment(command);
 
-        assertEquals(8.0, item.getQuantity());
-        assertEquals(8.0, loc.getCurrentWeight());
+        assertEquals(8.0, item.getQuantity(), "La cantidad del item debe bajar a 8");
+        assertEquals(8.0, loc.getCurrentWeight(), "El peso de la ubicación debe actualizarse a 8kg");
 
         verify(eventPublisher).publishEvent(any(InventoryAdjustedEvent.class));
     }

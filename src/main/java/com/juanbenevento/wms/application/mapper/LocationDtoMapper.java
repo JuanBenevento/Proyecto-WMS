@@ -2,9 +2,7 @@ package com.juanbenevento.wms.application.mapper;
 
 import com.juanbenevento.wms.application.ports.in.dto.InventoryItemResponse;
 import com.juanbenevento.wms.application.ports.in.dto.LocationResponse;
-import com.juanbenevento.wms.domain.model.InventoryItem;
 import com.juanbenevento.wms.domain.model.Location;
-import com.juanbenevento.wms.infrastructure.adapter.out.persistence.entity.LocationEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +11,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class LocationMapper {
+public class LocationDtoMapper {
 
     private final InventoryMapper inventoryMapper;
 
@@ -30,6 +28,9 @@ public class LocationMapper {
 
         return new LocationResponse(
                 location.getLocationCode(),
+                location.getAisle(),
+                location.getColumn(),
+                location.getLevel(),
                 location.getZoneType().name(),
                 location.getMaxWeight(),
                 location.getCurrentWeight(),
@@ -38,31 +39,6 @@ public class LocationMapper {
                 location.getCurrentVolume(),
                 Math.round(occupancy * 100.0) / 100.0,
                 itemResponses
-        );
-    }
-
-    public LocationEntity toLocationEntity(Location domain) {
-        if (domain == null) return null;
-        return LocationEntity.builder()
-                .locationCode(domain.getLocationCode())
-                .zoneType(domain.getZoneType())
-                .maxWeight(domain.getMaxWeight())
-                .maxVolume(domain.getMaxVolume())
-                .currentWeight(domain.getCurrentWeight())
-                .currentVolume(domain.getCurrentVolume())
-                .version(domain.getVersion())
-                .build();
-    }
-
-    public Location toLocationDomain(LocationEntity entity, List<InventoryItem> items) {
-        if (entity == null) return null;
-        return new Location(
-                entity.getLocationCode(),
-                entity.getZoneType(),
-                entity.getMaxWeight(),
-                entity.getMaxVolume(),
-                items,
-                entity.getVersion()
         );
     }
 }
