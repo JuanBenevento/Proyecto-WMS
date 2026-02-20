@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -35,11 +36,11 @@ public class StockMovementLogEntity extends AuditableEntity {
     private String lpn;
 
     @Column(nullable = false)
-    private Double quantity;
+    private BigDecimal quantity;
 
-    private Double oldQuantity;
+    private BigDecimal oldQuantity;
 
-    private Double newQuantity;
+    private BigDecimal newQuantity;
 
     @Column(name = "user_name")
     private String user;

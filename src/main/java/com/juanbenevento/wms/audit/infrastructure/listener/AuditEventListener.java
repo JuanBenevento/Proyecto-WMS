@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Component
@@ -28,25 +29,24 @@ public class AuditEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleInventoryAdjustment(InventoryAdjustedEvent event) {
-        double diff = event.newQuantity() - event.oldQuantity();
-        String tipo = diff < 0 ? "PÉRDIDA" : "GANANCIA";
+        BigDecimal diff = event.newQuantity().subtract(event.oldQuantity());
+        String tipo = diff.compareTo(BigDecimal.ZERO) < 0 ? "PÉRDIDA" : "GANANCIA";
 
         log.warn("🚨 [AUDITORÍA DE STOCK] Ajuste detectado: {} | LPN: {} | Diferencia: {} | Motivo: {}",
                 tipo, event.lpn(), diff, event.reason());
 
-        if (diff < -10) {
+        if (diff.compareTo(new BigDecimal("-10")) <= 0) {
             log.error("🔥 ALERTA DE SEGURIDAD: Se ajustaron muchas unidades negativas. Revisar cámaras.");
         }
 
-        // Guardar registro usando el port (desacoplado de la infraestructura directa)
         String username = getCurrentUsername();
         AuditLog auditLog = new AuditLog(
-                null, // ID será generado por la base de datos
+                null,
                 event.occurredAt() != null ? event.occurredAt() : LocalDateTime.now(),
                 StockMovementType.AJUSTE,
                 event.productSku(),
                 event.lpn(),
-                Math.abs(diff),
+                diff.abs(), // Cantidad del movimiento en valor absoluto
                 event.oldQuantity(),
                 event.newQuantity(),
                 username,
@@ -64,16 +64,15 @@ public class AuditEventListener {
         log.info("📦 [AUDITORÍA DE STOCK] Recepción detectada: LPN: {} | SKU: {} | Cantidad: {}",
                 event.lpn(), event.sku(), event.quantity());
 
-        // Guardar registro usando el port (desacoplado de la infraestructura directa)
         String username = getCurrentUsername();
         AuditLog auditLog = new AuditLog(
-                null, // ID será generado por la base de datos
+                null,
                 event.occurredAt() != null ? event.occurredAt() : LocalDateTime.now(),
                 StockMovementType.RECEPCION,
                 event.sku(),
                 event.lpn(),
                 event.quantity(),
-                null,
+                BigDecimal.ZERO,
                 event.quantity(),
                 username,
                 "Recepción de mercadería"
@@ -86,36 +85,38 @@ public class AuditEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleReservation(StockReservedEvent event) {
-        AuditLog log = new AuditLog(
+        AuditLog auditLog = new AuditLog(
                 null,
                 event.occurredAt(),
                 StockMovementType.MOVIMIENTO,
                 event.sku(),
-                "VARIOUS", // O "RESERVED-BATCH"
+                "VARIOUS",
                 event.quantity(),
-                0.0, 0.0,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
                 event.username(),
                 "Reserva de stock para pedido (Picking)"
         );
         // 2. Ahora sí coincide el nombre
-        stockMovementLogRepositoryPort.save(log);
+        stockMovementLogRepositoryPort.save(auditLog);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleShipping(StockShippedEvent event) {
-        AuditLog log = new AuditLog(
+        AuditLog auditLog = new AuditLog(
                 null,
                 event.occurredAt(),
                 StockMovementType.SALIDA,
                 event.sku(),
-                "LPN-UNKNOWN", // Idealmente el evento debería traer el LPN
+                "LPN-UNKNOWN",
                 event.quantity(),
-                0.0, 0.0,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
                 event.username(),
                 "Despacho confirmado desde " + event.locationCode()
         );
-        stockMovementLogRepositoryPort.save(log);
+        stockMovementLogRepositoryPort.save(auditLog);
     }
 
     @Async
@@ -132,7 +133,8 @@ public class AuditEventListener {
                 event.sku(),
                 event.lpn(),
                 event.quantity(),
-                0.0, 0.0, // No hubo cambio de cantidad, solo de lugar
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
                 event.username(),
                 event.type() + ": De " + event.oldLocation() + " a " + event.newLocation()
         );

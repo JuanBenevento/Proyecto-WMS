@@ -1,24 +1,30 @@
 package com.juanbenevento.wms.shared.domain.exception;
 
+import java.math.BigDecimal;
+
 public class LocationCapacityExceededException extends DomainException {
     
     private final String locationCode;
-    private final Double attemptedWeight;
-    private final Double attemptedVolume;
-    private final Double maxWeight;
-    private final Double maxVolume;
+    private final BigDecimal attemptedWeight;
+    private final BigDecimal attemptedVolume;
+    private final BigDecimal maxWeight;
+    private final BigDecimal maxVolume;
     
     public LocationCapacityExceededException(
             String locationCode,
-            Double attemptedWeight,
-            Double attemptedVolume,
-            Double maxWeight,
-            Double maxVolume
+            BigDecimal attemptedWeight,
+            BigDecimal attemptedVolume,
+            BigDecimal maxWeight,
+            BigDecimal maxVolume
     ) {
         super(String.format(
                 "La ubicación %s no puede soportar la carga solicitada. " +
-                "Intento: %.2f kg / %.2f m³. Capacidad máxima: %.2f kg / %.2f m³",
-                locationCode, attemptedWeight, attemptedVolume, maxWeight, maxVolume
+                        "Intento: %s kg / %s m³. Capacidad máxima: %s kg / %s m³",
+                locationCode,
+                attemptedWeight != null ? attemptedWeight.toPlainString() : "0",
+                attemptedVolume != null ? attemptedVolume.toPlainString() : "0",
+                maxWeight != null ? maxWeight.toPlainString() : "0",
+                maxVolume != null ? maxVolume.toPlainString() : "0"
         ));
         this.locationCode = locationCode;
         this.attemptedWeight = attemptedWeight;
@@ -31,19 +37,19 @@ public class LocationCapacityExceededException extends DomainException {
         return locationCode;
     }
     
-    public Double getAttemptedWeight() {
+    public BigDecimal getAttemptedWeight() {
         return attemptedWeight;
     }
     
-    public Double getAttemptedVolume() {
+    public BigDecimal getAttemptedVolume() {
         return attemptedVolume;
     }
     
-    public Double getMaxWeight() {
+    public BigDecimal getMaxWeight() {
         return maxWeight;
     }
     
-    public Double getMaxVolume() {
+    public BigDecimal getMaxVolume() {
         return maxVolume;
     }
 }

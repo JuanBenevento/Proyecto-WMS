@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -69,17 +71,26 @@ public class ManageLayoutService implements ManageLayoutUseCase {
         List<Location> children = locationRepository.findChildrenOfRack(rackCode);
 
         if (children.isEmpty()) {
-            return new RackSummaryDto(rackCode, 0, 0.0, 0.0, 0.0, "UNBOUND");
+            return new RackSummaryDto(rackCode, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, "UNBOUND");
         }
 
-        double totalMaxWeight = children.stream().mapToDouble(Location::getMaxWeight).sum();
-        double currentWeight = children.stream().mapToDouble(Location::getCurrentWeight).sum();
-        double occupancy = (totalMaxWeight > 0) ? (currentWeight / totalMaxWeight) : 0.0;
+        BigDecimal totalMaxWeight = children.stream()
+                .map(Location::getMaxWeight)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal currentWeight = children.stream()
+                .map(Location::getCurrentWeight)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal occupancy = BigDecimal.ZERO;
+        if (totalMaxWeight.compareTo(BigDecimal.ZERO) > 0) {
+            occupancy = currentWeight.divide(totalMaxWeight, 4, RoundingMode.HALF_UP);
+        }
 
         String status = "EMPTY";
-        if (occupancy >= 1.0) status = "OVERLOADED";
-        else if (occupancy > 0.9) status = "FULL";
-        else if (occupancy > 0.0) status = "PARTIAL";
+        if (occupancy.compareTo(BigDecimal.ONE) >= 0) status = "OVERLOADED";
+        else if (occupancy.compareTo(new BigDecimal("0.9")) > 0) status = "FULL";
+        else if (occupancy.compareTo(BigDecimal.ZERO) > 0) status = "PARTIAL";
 
         return new RackSummaryDto(
                 rackCode,

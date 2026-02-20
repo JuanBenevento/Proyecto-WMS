@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,32 +32,32 @@ public class ShippingService implements ShipStockUseCase {
     public void shipStock(ShipStockCommand command) {
         List<InventoryItem> reservedItems = inventoryRepository.findReservedStock(command.sku());
 
-        double totalReserved = reservedItems.stream().mapToDouble(InventoryItem::getQuantity).sum();
-        if (totalReserved < command.quantity()) {
+        BigDecimal totalReserved = reservedItems.stream()
+                .map(InventoryItem::getQuantity)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (totalReserved.compareTo(command.quantity()) < 0) {
             throw new DomainException("No hay suficiente stock RESERVADO para despachar. Reservado: " + totalReserved);
         }
 
-        double quantityToShip = command.quantity();
+        BigDecimal quantityToShip = command.quantity();
 
         for (InventoryItem item : reservedItems) {
-            if (quantityToShip <= 0) break;
+            if (quantityToShip.compareTo(BigDecimal.ZERO) <= 0) break;
 
-            Location location = locationRepository.findByCode(item.getLocationCode()).orElseThrow();
+            Location location = locationRepository.findByCode(item.getLocationCode())
+                    .orElseThrow(() -> new DomainException("Ubicación no encontrada"));
 
-            double currentQty = item.getQuantity();
-            double takenQty = Math.min(currentQty, quantityToShip);
+            BigDecimal currentQty = item.getQuantity();
+            BigDecimal takenQty = currentQty.min(quantityToShip);
 
-            // 1. Liberar espacio físico (DOMINIO RICO)
             location.releaseLoad(item);
 
-            if (takenQty >= currentQty) {
-                // Se va todo el pallet -> SHIPPED
+            if (takenQty.compareTo(currentQty) >= 0) {
                 item.setStatus(InventoryStatus.SHIPPED);
                 item.setQuantity(takenQty);
             } else {
-                // Parcial -> Queda un remanente
-                item.setQuantity(currentQty - takenQty);
-                // Volvemos a consolidar el remanente en la ubicación
+                item.setQuantity(currentQty.subtract(takenQty));
                 location.consolidateLoad(item);
             }
 
@@ -68,7 +69,7 @@ public class ShippingService implements ShipStockUseCase {
                     getCurrentUser(), LocalDateTime.now()
             ));
 
-            quantityToShip -= takenQty;
+            quantityToShip = quantityToShip.subtract(takenQty);
         }
     }
 

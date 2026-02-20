@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,7 +29,7 @@ public interface SpringDataLocationRepository extends JpaRepository<LocationEnti
     """)
     List<LocationEntity> findCandidates(
             @Param("zone") ZoneType zone,
-            @Param("requiredWeight") Double requiredWeight,
-            @Param("requiredVolume") Double requiredVolume
+            @Param("requiredWeight") BigDecimal requiredWeight,
+            @Param("requiredVolume") BigDecimal requiredVolume
     );
 }

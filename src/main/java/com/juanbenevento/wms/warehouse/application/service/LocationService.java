@@ -70,8 +70,16 @@ public class LocationService implements ManageLocationUseCase {
         Location existingLocation = locationRepository.findByCode(code)
                 .orElseThrow(() -> new LocationNotFoundException(code));
 
-        if (command.maxWeight() < existingLocation.getCurrentWeight()) {
-            throw new DomainException("No puedes reducir la capacidad máxima por debajo del peso actual ocupado.");
+        if (command.maxWeight().compareTo(existingLocation.getCurrentWeight()) < 0) {
+            throw new DomainException(String.format(
+                    "No es posible reducir la capacidad máxima (%s kg) por debajo del peso actual ocupado (%s kg).",
+                    command.maxWeight().toPlainString(),
+                    existingLocation.getCurrentWeight().toPlainString()
+            ));
+        }
+
+        if (command.maxVolume().compareTo(existingLocation.getCurrentVolume()) < 0) {
+            throw new DomainException("No es posible reducir el volumen máximo por debajo del volumen actual ocupado.");
         }
 
         Location updated = new Location(
@@ -80,8 +88,8 @@ public class LocationService implements ManageLocationUseCase {
                 existingLocation.getColumn(),
                 existingLocation.getLevel(),
                 command.zoneType(),
-                command.maxWeight(),
-                command.maxVolume(),
+                command.maxWeight(), // BigDecimal
+                command.maxVolume(), // BigDecimal
                 existingLocation.getItems(),
                 existingLocation.getVersion()
         );
@@ -126,7 +134,6 @@ public class LocationService implements ManageLocationUseCase {
 
         String[] parts = code.split("-");
 
-        // Estrategia de Parsing Robusta
         String aisle = parts.length > 0 ? parts[0] : "GEN";
         String column = parts.length > 1 ? parts[1] : "01";
         String level = parts.length > 2 ? parts[2] : "01";

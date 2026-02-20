@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -66,9 +67,9 @@ public class ProductController {
             @Schema(example = "TV-LG-65") @NotBlank String sku,
             @Schema(example = "Smart TV 65") @NotBlank String name,
             @Schema(example = "Televisor 4K") String description,
-            @NotNull @Positive Double width,
-            @NotNull @Positive Double height,
-            @NotNull @Positive Double depth,
-            @NotNull @Positive Double weight
+            @NotNull @Positive BigDecimal width,
+            @NotNull @Positive BigDecimal height,
+            @NotNull @Positive BigDecimal depth,
+            @NotNull @Positive BigDecimal weight
     ) {}
 }

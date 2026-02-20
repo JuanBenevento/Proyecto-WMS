@@ -20,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -108,15 +109,15 @@ public class InternalOperationsService implements PutAwayUseCase, ManageInventor
         Location location = locationRepository.findByCode(item.getLocationCode())
                 .orElseThrow(() -> new LocationNotFoundException(item.getLocationCode()));
 
-        double oldQty = item.getQuantity();
-        double newQty = command.newQuantity();
+        BigDecimal oldQty = item.getQuantity();
+        BigDecimal newQty = command.newQuantity();
 
         if (oldQty == newQty) return;
 
         location.releaseLoad(item);
 
-        if (newQty <= 0) {
-            item.setQuantity(0.0);
+        if (newQty.compareTo(BigDecimal.ZERO) <= 0) {
+            item.setQuantity(BigDecimal.valueOf(0.0));
             item.setStatus(InventoryStatus.SHIPPED);
         } else {
             item.setQuantity(newQty);

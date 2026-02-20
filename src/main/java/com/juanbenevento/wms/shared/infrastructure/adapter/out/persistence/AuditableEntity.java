@@ -21,9 +21,7 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor
 @MappedSuperclass
-// FASE 1: Listeners para Auditoría y Seguridad Multitenant
 @EntityListeners({AuditingEntityListener.class, TenantEntityListener.class})
-// FASE 1: Definición del Filtro de Hibernate para Seguridad en Lectura
 @FilterDef(
         name = "tenantFilter",
         parameters = @ParamDef(name = "tenantId", type = String.class)

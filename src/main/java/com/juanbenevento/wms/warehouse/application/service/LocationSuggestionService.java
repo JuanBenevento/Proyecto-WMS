@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -25,12 +26,12 @@ public class LocationSuggestionService implements SuggestLocationUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public String suggestBestLocation(String sku, Double quantity) {
+    public String suggestBestLocation(String sku, BigDecimal quantity) {
         Product product = productRepository.findBySku(sku)
                 .orElseThrow(() -> new ProductNotFoundException(sku));
 
-        Double requiredWeight = product.getDimensions().weight() * quantity;
-        Double requiredVolume = product.getStorageVolume() * quantity;
+        BigDecimal requiredWeight = product.getDimensions().weight().multiply(quantity);
+        BigDecimal requiredVolume = product.getStorageVolume().multiply(quantity);
         ZoneType targetZone = strategy.determineZone(product);
 
         List<Location> candidates = locationRepository.findAvailableLocations(targetZone, requiredWeight, requiredVolume);

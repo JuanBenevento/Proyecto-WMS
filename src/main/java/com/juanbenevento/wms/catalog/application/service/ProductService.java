@@ -85,7 +85,6 @@ public class ProductService implements ManageProductUseCase {
             throw new ProductNotFoundException(sku);
         }
 
-        // Validar integridad referencial de negocio
         if (productRepository.existsInInventory(sku)) {
             throw new ProductInUseException(sku, "Tiene stock físico asociado.");
         }

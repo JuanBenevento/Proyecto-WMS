@@ -7,6 +7,8 @@ import com.juanbenevento.wms.warehouse.domain.model.Location;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 
@@ -19,9 +21,14 @@ public class LocationDtoMapper {
     public LocationResponse toLocationResponse(Location location) {
         if (location == null) return null;
 
-        double occupancy = (location.getMaxWeight() > 0)
-                ? (location.getCurrentWeight() / location.getMaxWeight()) * 100.0
-                : 0.0;
+        BigDecimal occupancyPercent = BigDecimal.ZERO;
+        if (location.getMaxWeight() != null && location.getMaxWeight().compareTo(BigDecimal.ZERO) > 0) {
+            occupancyPercent = location.getCurrentWeight()
+                    .divide(location.getMaxWeight(), 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100.00"));
+        }
+
+        BigDecimal availableWeight = location.getMaxWeight().subtract(location.getCurrentWeight());
 
         List<InventoryItemResponse> itemResponses = (location.getItems() != null)
                 ? location.getItems().stream().map(inventoryMapper::toItemResponse).toList()
@@ -35,10 +42,10 @@ public class LocationDtoMapper {
                 location.getZoneType().name(),
                 location.getMaxWeight(),
                 location.getCurrentWeight(),
-                location.getMaxWeight() - location.getCurrentWeight(),
+                availableWeight,
                 location.getMaxVolume(),
                 location.getCurrentVolume(),
-                Math.round(occupancy * 100.0) / 100.0,
+                occupancyPercent.setScale(2, RoundingMode.HALF_UP),
                 itemResponses
         );
     }

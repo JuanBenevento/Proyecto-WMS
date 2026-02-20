@@ -9,6 +9,7 @@ import com.juanbenevento.wms.inventory.infrastructure.out.persistence.SpringData
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -55,7 +56,7 @@ public class LocationPersistenceAdapter implements LocationRepositoryPort {
     }
 
     @Override
-    public List<Location> findAvailableLocations(ZoneType zone, Double weightNeeded, Double volumeNeeded) {
+    public List<Location> findAvailableLocations(ZoneType zone, BigDecimal weightNeeded, BigDecimal volumeNeeded) {
         return locationRepository.findCandidates(zone, weightNeeded, volumeNeeded)
                 .stream()
                 .map(this::hydrateLocation)

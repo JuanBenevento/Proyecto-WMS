@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,7 +21,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
-
     @Mock private ProductRepositoryPort productRepository;
     @Mock private ProductMapper mapper;
 
@@ -29,13 +29,24 @@ class ProductServiceTest {
 
     @Test
     void shouldThrowError_WhenUpdatingDimensionsWithExistingStock() {
+        // GIVEN
         String sku = "TV-01";
-        Product existing = new Product(UUID.randomUUID(), sku, "TV", "Desc", new Dimensions(10.0, 10.0, 10.0, 10.0), 1L);
-        CreateProductCommand updateCmd = new CreateProductCommand(sku, "TV", "Desc", 10.0, 10.0, 10.0, 20.0);
+        Dimensions dims = new Dimensions(
+                new BigDecimal("10.0"), new BigDecimal("10.0"),
+                new BigDecimal("10.0"), new BigDecimal("10.0")
+        );
+        Product existing = new Product(UUID.randomUUID(), sku, "TV", "Desc", dims, 1L);
+
+        CreateProductCommand updateCmd = new CreateProductCommand(
+                sku, "TV", "Desc",
+                new BigDecimal("10.0"), new BigDecimal("10.0"),
+                new BigDecimal("10.0"), new BigDecimal("20.0")
+        );
 
         when(productRepository.findBySku(sku)).thenReturn(Optional.of(existing));
         when(productRepository.existsInInventory(sku)).thenReturn(true);
 
+        // WHEN & THEN
         assertThrows(ProductInUseException.class, () -> {
             productService.updateProduct(sku, updateCmd);
         });
@@ -45,17 +56,28 @@ class ProductServiceTest {
 
     @Test
     void shouldAllowUpdate_WhenNoStockExists() {
+        // GIVEN
         String sku = "TV-01";
-        Product existing = new Product(UUID.randomUUID(), sku, "TV", "Desc", new Dimensions(10.0, 10.0, 10.0, 10.0), 1L);
-        CreateProductCommand updateCmd = new CreateProductCommand(sku, "TV", "Desc", 10.0, 10.0, 10.0, 20.0); // Cambio de peso
+        Dimensions dims = new Dimensions(
+                new BigDecimal("10.0"), new BigDecimal("10.0"),
+                new BigDecimal("10.0"), new BigDecimal("10.0")
+        );
+        Product existing = new Product(UUID.randomUUID(), sku, "TV", "Desc", dims, 1L);
+
+        CreateProductCommand updateCmd = new CreateProductCommand(
+                sku, "TV", "Desc",
+                new BigDecimal("10.0"), new BigDecimal("10.0"),
+                new BigDecimal("10.0"), new BigDecimal("20.0")
+        );
 
         when(productRepository.findBySku(sku)).thenReturn(Optional.of(existing));
         when(productRepository.existsInInventory(sku)).thenReturn(false);
 
+        // WHEN
         productService.updateProduct(sku, updateCmd);
 
+        // THEN
         verify(productRepository).save(any(Product.class));
-        // Verify mapper call if needed
         verify(mapper).toProductResponse(any());
     }
 }

@@ -4,6 +4,7 @@ import com.juanbenevento.wms.shared.domain.exception.DomainException;
 import com.juanbenevento.wms.shared.domain.valueobject.Dimensions;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Getter
@@ -46,7 +47,7 @@ public class Product {
         this.dimensions = newDimensions;
     }
 
-    public Double getStorageVolume() {
+    public BigDecimal getStorageVolume() {
         return this.dimensions.calculateVolume();
     }
 
