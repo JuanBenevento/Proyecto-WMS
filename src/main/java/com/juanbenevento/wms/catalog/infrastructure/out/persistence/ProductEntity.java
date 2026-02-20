@@ -10,6 +10,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -30,10 +31,10 @@ public class ProductEntity extends AuditableEntity {
     private String name;
     private String description;
 
-    private Double width;
-    private Double height;
-    private Double depth;
-    private Double weight;
+    private BigDecimal width;
+    private BigDecimal height;
+    private BigDecimal depth;
+    private BigDecimal weight;
 
     @Builder.Default
     @Column(name = "active", nullable = false)

@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -67,7 +68,7 @@ public class InventoryController {
 
     @Operation(summary = "Consultar Estrategia", description = "El sistema sugiere dónde guardar según el perfil del producto.")
     @GetMapping("/suggest-location")
-    public ResponseEntity<String> suggestLocation(@RequestParam String sku, @RequestParam Double quantity) {
+    public ResponseEntity<String> suggestLocation(@RequestParam String sku, @RequestParam BigDecimal quantity) {
         String locationCode = suggestLocationUseCase.suggestBestLocation(sku, quantity);
         return ResponseEntity.ok(locationCode);
     }
@@ -100,7 +101,7 @@ public class InventoryController {
 
     public record ReceiveInventoryRequest(
             @Schema(example = "TV-LG-65") @NotBlank String productSku,
-            @Schema(example = "10.0") @NotNull @Min(1) Double quantity,
+            @Schema(example = "10.0") @NotNull @Min(1) BigDecimal quantity,
             @Schema(example = "A-01-01-1") @NotBlank String locationCode,
             @Schema(example = "LOTE-2025") @NotBlank String batchNumber,
             @Schema(example = "2030-12-31") @NotNull LocalDate expiryDate
@@ -119,7 +120,7 @@ public class InventoryController {
 
     public record InventoryAdjustmentRequest(
             @Schema(example = "LPN-173...") @NotBlank String lpn,
-            @Schema(example = "5.0") @NotNull @Min(0) Double newQuantity,
+            @Schema(example = "5.0") @NotNull @Min(0) BigDecimal newQuantity,
             @Schema(example = "Dañado / Pérdida") @NotBlank String reason
     ) {}
 }

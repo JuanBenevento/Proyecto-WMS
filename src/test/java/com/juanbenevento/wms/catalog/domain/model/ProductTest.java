@@ -5,13 +5,20 @@ import com.juanbenevento.wms.shared.domain.valueobject.Dimensions;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 class ProductTest {
 
     @Test
     void shouldCreateProductSuccessfully() {
-        Dimensions dims = new Dimensions(10.0, 10.0, 10.0, 5.0);
+        Dimensions dims = new Dimensions(
+                new BigDecimal("10.0"),
+                new BigDecimal("10.0"),
+                new BigDecimal("10.0"),
+                new BigDecimal("5.0")
+        );
+
         Product product = new Product(UUID.randomUUID(), "SKU-123", "Laptop", "Gaming Laptop", dims, null);
 
         Assertions.assertNotNull(product);
@@ -20,16 +27,27 @@ class ProductTest {
 
     @Test
     void shouldIdentifyHeavyLoad() {
-        Dimensions heavyDims = new Dimensions(100.0, 100.0, 100.0, 50.0); // > 20kg
+        Dimensions heavyDims = new Dimensions(
+                new BigDecimal("100.0"),
+                new BigDecimal("100.0"),
+                new BigDecimal("100.0"),
+                new BigDecimal("50.0")
+        );
+
         Product heavyProduct = new Product(UUID.randomUUID(), "SKU-HEAVY", "Motor", "V8", heavyDims, 1L);
 
-        Assertions.assertTrue(heavyProduct.requiresHeavyMachinery());
+        Assertions.assertTrue(heavyProduct.getDimensions().isHeavyLoad());
     }
 
     @Test
     void shouldThrowErrorForInvalidWeight() {
         Assertions.assertThrows(DomainException.class, () -> {
-            new Dimensions(10.0, 10.0, 10.0, -1.0); // Peso negativo
+            new Dimensions(
+                    new BigDecimal("10.0"),
+                    new BigDecimal("10.0"),
+                    new BigDecimal("10.0"),
+                    new BigDecimal("-1.0")
+            );
         });
     }
 }

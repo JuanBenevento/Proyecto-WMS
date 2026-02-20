@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/api/v1/picking")
 @RequiredArgsConstructor
@@ -50,6 +52,6 @@ public class PickingController {
 
     public record PickingRequest(
             @Schema(example = "TV-LG-65") @NotBlank String sku,
-            @Schema(example = "5.0") @NotNull @Positive Double quantity
+            @Schema(example = "5.0") @NotNull @Positive BigDecimal quantity
     ) {}
 }

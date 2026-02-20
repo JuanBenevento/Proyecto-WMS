@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -72,7 +73,7 @@ public class LocationController {
     public record CreateLocationRequest(
             @Schema(example = "A-01-01-1") @NotBlank String locationCode,
             @Schema(example = "DRY_STORAGE") @NotNull ZoneType zoneType,
-            @Schema(example = "1000.0") @NotNull @Positive Double maxWeight,
-            @Schema(example = "2000000.0") @NotNull @Positive Double maxVolume
+            @Schema(example = "1000.0") @NotNull @Positive BigDecimal maxWeight,
+            @Schema(example = "2000000.0") @NotNull @Positive BigDecimal maxVolume
     ) {}
 }

@@ -4,6 +4,8 @@ import com.juanbenevento.wms.warehouse.domain.model.ZoneType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "locations", indexes = {
         @Index(name = "idx_loc_aisle", columnList = "aisle"),
@@ -22,10 +24,10 @@ public class LocationEntity {
     private String level_name;
     @Enumerated(EnumType.STRING)
     private ZoneType zoneType;
-    private Double maxWeight;
-    private Double maxVolume;
-    private Double currentWeight;
-    private Double currentVolume;
+    private BigDecimal maxWeight;
+    private BigDecimal maxVolume;
+    private BigDecimal currentWeight;
+    private BigDecimal currentVolume;
     @Version
     private Long version;
 }

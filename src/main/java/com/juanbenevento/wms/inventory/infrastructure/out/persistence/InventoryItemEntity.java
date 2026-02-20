@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -16,7 +17,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @SuperBuilder
 public class InventoryItemEntity extends AuditableEntity {
-
     @Id
     @Column(name = "lpn")
     private String lpn;
@@ -24,7 +24,7 @@ public class InventoryItemEntity extends AuditableEntity {
     @Column(nullable = false)
     private String productSku;
 
-    private Double quantity;
+    private BigDecimal quantity;
 
     private String batchNumber;
     private LocalDate expiryDate;
