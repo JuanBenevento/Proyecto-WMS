@@ -18,6 +18,12 @@ public class NotificationListener {
                 event.lpn(), event.quantity(), event.sku());
 
         // Aquí iría la lógica real de JavaMailSender
-        try { Thread.sleep(1000); } catch (InterruptedException e) {} // Simulamos demora de red
+        try {
+            Thread.sleep(1000); // Simulamos demora de red
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Email notification interrupted, aborting");
+            return;
+        }
     }
 }
