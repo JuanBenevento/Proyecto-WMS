@@ -1,11 +1,12 @@
 package com.juanbenevento.wms.shared.infrastructure.security;
 
-import com.juanbenevento.wms.identity.domain.model.User; // <--- USAMOS EL DOMINIO
+import com.juanbenevento.wms.identity.domain.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -19,11 +20,37 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
+    private static final int MIN_SECRET_KEY_LENGTH = 32; // 256 bits minimum for HS256
+
     @Value("${application.security.jwt.secret-key}")
     private String secretKey;
 
     @Value("${application.security.jwt.expiration}")
     private long jwtExpiration;
+
+    @PostConstruct
+    public void validateSecretKey() {
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException(
+                "JWT_SECRET_KEY is not configured. " +
+                "Set the environment variable JWT_SECRET_KEY with a Base64-encoded key of at least 32 characters."
+            );
+        }
+        
+        // Validate minimum length for HS256
+        try {
+            byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+            if (keyBytes.length < MIN_SECRET_KEY_LENGTH) {
+                throw new IllegalStateException(
+                    "JWT_SECRET_KEY is too short. Minimum length is 256 bits (32 bytes Base64-encoded, ~44 characters)."
+                );
+            }
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                "JWT_SECRET_KEY is not valid Base64. Please provide a Base64-encoded secret key."
+            );
+        }
+    }
 
     // --- EXTRAER DATOS ---
     public String extractUsername(String token) {
