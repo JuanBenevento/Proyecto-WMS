@@ -9,6 +9,7 @@ import com.juanbenevento.wms.inventory.application.port.in.usecases.ManageInvent
 import com.juanbenevento.wms.inventory.application.port.in.usecases.PutAwayUseCase;
 import com.juanbenevento.wms.inventory.application.port.in.usecases.ReceiveInventoryUseCase;
 import com.juanbenevento.wms.inventory.application.port.in.usecases.RetrieveInventoryUseCase;
+import com.juanbenevento.wms.shared.infrastructure.idempotency.Idempotent;
 import com.juanbenevento.wms.warehouse.application.port.in.usecases.SuggestLocationUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -47,6 +49,8 @@ public class InventoryController {
     @Operation(summary = "Recepción de Mercadería", description = "Genera LPN y valida capacidad física de la ubicación.")
     @PostMapping("/receive")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
+    @Idempotent
+    @Transactional
     public ResponseEntity<InventoryItemResponse> receiveInventory(@RequestBody @Valid ReceiveInventoryRequest request) {
         ReceiveInventoryCommand command = new ReceiveInventoryCommand(
                 request.productSku(), request.quantity(), request.locationCode(),
@@ -76,6 +80,8 @@ public class InventoryController {
     @Operation(summary = "Movimiento Interno", description = "Mueve un LPN de una ubicación a otra validando capacidades.")
     @PostMapping("/move")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
+    @Idempotent
+    @Transactional
     public ResponseEntity<Void> internalMove(@RequestBody @Valid InternalMoveRequest request) {
         InternalMoveCommand command = new InternalMoveCommand(
                 request.lpn(), request.targetLocationCode(), request.reason()
@@ -87,6 +93,8 @@ public class InventoryController {
     @Operation(summary = "Ajuste de Inventario", description = "Modifica la cantidad de un LPN (Pérdida/Ganancia). Solo ADMIN.")
     @PostMapping("/adjust")
     @PreAuthorize("hasAuthority('ADMIN')")
+    @Idempotent
+    @Transactional
     public ResponseEntity<Void> adjustInventory(@RequestBody @Valid InventoryAdjustmentRequest request) {
         InventoryAdjustmentCommand command = new InventoryAdjustmentCommand(
                 request.lpn(), request.newQuantity(), request.reason()
