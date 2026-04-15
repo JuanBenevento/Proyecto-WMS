@@ -57,9 +57,6 @@ export class DesignerPageComponent implements AfterViewInit {
 
         if (hasObjects) {
           this.fabricService.loadJSON(json);
-          console.log('Diseño recuperado y pintado sobre la grilla.');
-        } else {
-          console.log('Lienzo listo (Grilla inicial mantenida).');
         }
       },
       error: (err) => {
@@ -74,7 +71,6 @@ export class DesignerPageComponent implements AfterViewInit {
         
         this.saveUC.execute(json).subscribe({
           next: () => {
-            console.log('Guardado exitoso en base de datos.');
             alert('Diseño guardado correctamente'); 
           },
           error: (err) => {
@@ -83,7 +79,6 @@ export class DesignerPageComponent implements AfterViewInit {
           }
         });
     } catch (e: any) {
-        console.warn('Validación:', e.message);
         alert(e.message);
     }
   }

@@ -118,7 +118,6 @@ export class OnboardingComponent {
 
     this.onboardUC.execute(requestData).subscribe({
       next: (response) => {
-        console.log('Empresa creada:', response);
         this.isSubmitting = false;
         this.router.navigate(['/saas/tenants']); 
       },
