@@ -6,6 +6,7 @@ import { ReceiveCommand } from '../../domain/ports/commands/receive.command';
 import { MoveCommand } from '../../domain/ports/commands/move.command';
 import { PickingCommand } from '../../domain/ports/commands/picking.command';
 import { InventoryItemResponseDto } from '../dtos/inventory-response.dto';
+import { LocationSuggestionResponse } from '../dtos/location-suggestion-response.dto';
 import { InventoryMapper } from '../mappers/inventory.mapper';
 import { environment } from '../../../../../environments/environment';
 import { InventoryItemModel } from '../../domain/models/inventory-item.model';
@@ -21,7 +22,7 @@ export class InventoryApiAdapter extends InventoryRepository {
   }
 
   getAll(): Observable<InventoryItemModel[]> {
-    return this.http.get<InventoryItemResponseDto[]>(`${this.INV_URL}/getAll`).pipe(
+    return this.http.get<InventoryItemResponseDto[]>(`${this.INV_URL}`).pipe(
       map(dtos => dtos.map(dto => InventoryMapper.toDomain(dto)))
     );
   }
@@ -46,10 +47,9 @@ export class InventoryApiAdapter extends InventoryRepository {
       .set('sku', sku)
       .set('quantity', quantity.toString());
 
-    return this.http.get(`${this.INV_URL}/suggest-location`, { 
-      params, 
-      responseType: 'text' 
-    });
+    return this.http.get<LocationSuggestionResponse>(`${this.INV_URL}/suggest-location`, { params }).pipe(
+      map(response => response.locationCode)
+    );
   }
 
   receive(command: ReceiveCommand): Observable<InventoryItemModel> {
