@@ -14,6 +14,7 @@ import com.juanbenevento.wms.inventory.domain.model.InventoryItem;
 import com.juanbenevento.wms.inventory.domain.model.InventoryStatus;
 import com.juanbenevento.wms.warehouse.domain.model.Location;
 import com.juanbenevento.wms.catalog.domain.model.Product;
+import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -73,6 +74,6 @@ public class InboundService implements ReceiveInventoryUseCase {
     }
 
     private String generateLpn() {
-        return "LPN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return WmsConstants.LPN_PREFIX + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }

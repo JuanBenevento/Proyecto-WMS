@@ -9,6 +9,7 @@ import com.juanbenevento.wms.shared.domain.exception.DomainException;
 import com.juanbenevento.wms.inventory.domain.model.InventoryItem;
 import com.juanbenevento.wms.inventory.domain.model.InventoryStatus;
 import com.juanbenevento.wms.warehouse.domain.model.Location;
+import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -92,7 +93,7 @@ public class PickingService implements AllocateStockUseCase {
     }
 
     private String generatePickingLpn() {
-        return "PICK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return WmsConstants.PICK_PREFIX + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     private String getCurrentUser() {
