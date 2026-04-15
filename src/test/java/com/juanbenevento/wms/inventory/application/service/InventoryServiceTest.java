@@ -13,7 +13,9 @@ import com.juanbenevento.wms.catalog.application.port.out.ProductRepositoryPort;
 import com.juanbenevento.wms.catalog.domain.model.Product;
 import com.juanbenevento.wms.inventory.domain.event.InventoryAdjustedEvent;
 import com.juanbenevento.wms.inventory.domain.event.StockReceivedEvent;
+import com.juanbenevento.wms.shared.domain.valueobject.BatchNumber;
 import com.juanbenevento.wms.shared.domain.valueobject.Dimensions;
+import com.juanbenevento.wms.shared.domain.valueobject.Lpn;
 import com.juanbenevento.wms.warehouse.domain.model.Location;
 import com.juanbenevento.wms.warehouse.domain.model.ZoneType;
 import org.junit.jupiter.api.Test;
@@ -79,7 +81,7 @@ class InventoryServiceTest {
         Product product = new Product(UUID.randomUUID(), "SKU-1", "P", "D",
                 new Dimensions(new BigDecimal("1.0"), new BigDecimal("1.0"), new BigDecimal("1.0"), new BigDecimal("5.0")), 1L);
 
-        InventoryItem item = new InventoryItem(lpn, "SKU-1", product, quantity, "B1", LocalDate.now(), InventoryStatus.IN_QUALITY_CHECK, oldLocCode, 1L);
+        InventoryItem item = InventoryItem.createReceived(Lpn.fromRaw(lpn), "SKU-1", product, quantity, BatchNumber.of("B1"), LocalDate.now(), oldLocCode);
 
         Location oldLoc = Location.createOperationalArea(oldLocCode, ZoneType.DOCK_DOOR, new BigDecimal("1000.0"), new BigDecimal("1000.0"));
         oldLoc.consolidateLoad(item);
@@ -108,7 +110,7 @@ class InventoryServiceTest {
 
         Product product = new Product(UUID.randomUUID(), "SKU-1", "P", "D",
                 new Dimensions(new BigDecimal("1.0"), new BigDecimal("1.0"), new BigDecimal("1.0"), new BigDecimal("1.0")), 1L);
-        InventoryItem item = new InventoryItem(lpn, "SKU-1", product, new BigDecimal("10.0"), "B1", LocalDate.now(), InventoryStatus.AVAILABLE, locCode, 1L);
+        InventoryItem item = InventoryItem.createReceived(Lpn.fromRaw(lpn), "SKU-1", product, new BigDecimal("10.0"), BatchNumber.of("B1"), LocalDate.now(), locCode);
 
         Location loc = Location.createRackPosition(locCode, "A", "01", "01", ZoneType.DRY_STORAGE, new BigDecimal("1000.0"), new BigDecimal("1000.0"));
         loc.consolidateLoad(item);

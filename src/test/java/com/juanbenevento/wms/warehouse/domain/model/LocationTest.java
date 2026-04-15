@@ -4,8 +4,9 @@ import com.juanbenevento.wms.catalog.domain.model.Product;
 import com.juanbenevento.wms.inventory.domain.model.InventoryItem;
 import com.juanbenevento.wms.inventory.domain.model.InventoryStatus;
 import com.juanbenevento.wms.shared.domain.exception.LocationCapacityExceededException;
+import com.juanbenevento.wms.shared.domain.valueobject.BatchNumber;
 import com.juanbenevento.wms.shared.domain.valueobject.Dimensions;
-import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
+import com.juanbenevento.wms.shared.domain.valueobject.Lpn;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -114,16 +115,14 @@ class LocationTest {
     }
 
     private InventoryItem createItem(Product product, BigDecimal qty, String locCode) {
-        return new InventoryItem(
-                WmsConstants.LPN_PREFIX + UUID.randomUUID(),
+        return InventoryItem.createReceived(
+                Lpn.generate(),
                 product.getSku(),
                 product,
                 qty,
-                "BATCH-001",
+                BatchNumber.of("BATCH-001"),
                 LocalDate.now().plusDays(30),
-                InventoryStatus.AVAILABLE,
-                locCode,
-                null
+                locCode
         );
     }
 }
