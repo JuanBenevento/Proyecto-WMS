@@ -9,6 +9,8 @@ import com.juanbenevento.wms.shared.infrastructure.adapter.out.persistence.Audit
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,6 +26,7 @@ public class InventoryItemEntity extends AuditableEntity {
     
     @Id
     @Column(name = "lpn", length = 50)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Convert(converter = LpnConverter.class)
     private Lpn lpn;
 
@@ -33,6 +36,7 @@ public class InventoryItemEntity extends AuditableEntity {
     private BigDecimal quantity;
 
     @Column(name = "batch_number", length = 50)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Convert(converter = BatchNumberConverter.class)
     private BatchNumber batchNumber;
     

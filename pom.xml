@@ -140,6 +140,17 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<!-- Excluir tests de integración con Testcontainers por defecto -->
+			<!-- Usar mvn test -Pci para ejecutar todos los tests incluyendo integración -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>**/IdempotencyIntegrationTest.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 </project>
