@@ -1,5 +1,6 @@
 package com.juanbenevento.wms.warehouse.application.service;
 
+import com.juanbenevento.wms.inventory.application.port.in.dto.LocationSuggestionResponse;
 import com.juanbenevento.wms.warehouse.application.port.in.usecases.SuggestLocationUseCase;
 import com.juanbenevento.wms.warehouse.application.port.out.LocationRepositoryPort;
 import com.juanbenevento.wms.catalog.application.port.out.ProductRepositoryPort;
@@ -26,7 +27,7 @@ public class LocationSuggestionService implements SuggestLocationUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public String suggestBestLocation(String sku, BigDecimal quantity) {
+    public LocationSuggestionResponse suggestBestLocation(String sku, BigDecimal quantity) {
         Product product = productRepository.findBySku(sku)
                 .orElseThrow(() -> new ProductNotFoundException(sku));
 
@@ -39,6 +40,12 @@ public class LocationSuggestionService implements SuggestLocationUseCase {
         if (candidates.isEmpty()) {
             throw new DomainException(String.format("No hay espacio disponible en zona %s para %.2f kg / %.2f m³", targetZone, requiredWeight, requiredVolume));
         }
-        return candidates.get(0).getLocationCode();
+
+        Location suggested = candidates.get(0);
+        return new LocationSuggestionResponse(
+                suggested.getLocationCode(),
+                suggested.getAvailableCapacity(),
+                suggested.getZoneType().name()
+        );
     }
 }

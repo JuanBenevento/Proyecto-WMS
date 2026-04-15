@@ -5,6 +5,7 @@ import com.juanbenevento.wms.inventory.application.port.in.command.InventoryAdju
 import com.juanbenevento.wms.inventory.application.port.in.command.PutAwayInventoryCommand;
 import com.juanbenevento.wms.inventory.application.port.in.command.ReceiveInventoryCommand;
 import com.juanbenevento.wms.inventory.application.port.in.dto.InventoryItemResponse;
+import com.juanbenevento.wms.inventory.application.port.in.dto.LocationSuggestionResponse;
 import com.juanbenevento.wms.inventory.application.port.in.usecases.ManageInventoryOperationsUseCase;
 import com.juanbenevento.wms.inventory.application.port.in.usecases.PutAwayUseCase;
 import com.juanbenevento.wms.inventory.application.port.in.usecases.ReceiveInventoryUseCase;
@@ -40,7 +41,7 @@ public class InventoryController {
     private final SuggestLocationUseCase suggestLocationUseCase;
 
     @Operation(summary = "Ver stock real", description = "Lista todos los items con su LPN y estado.")
-    @GetMapping("/getAll")
+    @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
     public ResponseEntity<List<InventoryItemResponse>> getAllInventory() {
         return ResponseEntity.ok(retrieveInventoryUseCase.getAllInventory());
@@ -72,9 +73,8 @@ public class InventoryController {
 
     @Operation(summary = "Consultar Estrategia", description = "El sistema sugiere dónde guardar según el perfil del producto.")
     @GetMapping("/suggest-location")
-    public ResponseEntity<String> suggestLocation(@RequestParam String sku, @RequestParam BigDecimal quantity) {
-        String locationCode = suggestLocationUseCase.suggestBestLocation(sku, quantity);
-        return ResponseEntity.ok(locationCode);
+    public ResponseEntity<LocationSuggestionResponse> suggestLocation(@RequestParam String sku, @RequestParam BigDecimal quantity) {
+        return ResponseEntity.ok(suggestLocationUseCase.suggestBestLocation(sku, quantity));
     }
 
     @Operation(summary = "Movimiento Interno", description = "Mueve un LPN de una ubicación a otra validando capacidades.")

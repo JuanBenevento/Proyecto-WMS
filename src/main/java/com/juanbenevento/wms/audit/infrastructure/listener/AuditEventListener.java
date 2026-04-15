@@ -4,6 +4,7 @@ import com.juanbenevento.wms.inventory.application.port.out.StockMovementLogRepo
 import com.juanbenevento.wms.audit.domain.AuditLog;
 import com.juanbenevento.wms.inventory.domain.model.StockMovementType;
 import com.juanbenevento.wms.inventory.domain.event.*;
+import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -90,7 +91,7 @@ public class AuditEventListener {
                 event.occurredAt(),
                 StockMovementType.MOVIMIENTO,
                 event.sku(),
-                "VARIOUS",
+                WmsConstants.LPN_VARIOUS,
                 event.quantity(),
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
@@ -109,7 +110,7 @@ public class AuditEventListener {
                 event.occurredAt(),
                 StockMovementType.SALIDA,
                 event.sku(),
-                "LPN-UNKNOWN",
+                WmsConstants.LPN_UNKNOWN,
                 event.quantity(),
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,

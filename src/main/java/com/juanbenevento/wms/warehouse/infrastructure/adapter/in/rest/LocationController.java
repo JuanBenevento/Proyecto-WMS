@@ -2,7 +2,9 @@ package com.juanbenevento.wms.warehouse.infrastructure.adapter.in.rest;
 
 import com.juanbenevento.wms.warehouse.application.port.in.command.CreateLocationCommand;
 import com.juanbenevento.wms.warehouse.application.port.in.dto.LocationResponse;
+import com.juanbenevento.wms.warehouse.application.port.in.dto.RackSummaryDto;
 import com.juanbenevento.wms.warehouse.application.port.in.usecases.ManageLocationUseCase;
+import com.juanbenevento.wms.warehouse.application.port.in.usecases.ManageLayoutUseCase;
 import com.juanbenevento.wms.warehouse.domain.model.ZoneType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -27,6 +29,7 @@ import java.util.List;
 public class LocationController {
 
     private final ManageLocationUseCase manageLocationUseCase;
+    private final ManageLayoutUseCase manageLayoutUseCase;
 
     @Operation(summary = "Ver mapa del depósito", description = "Lista todas las ubicaciones y su estado de ocupación.")
     @GetMapping
@@ -67,6 +70,20 @@ public class LocationController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<LocationResponse> getLocationByCode(@PathVariable String code) {
         return ResponseEntity.ok(manageLocationUseCase.getLocationByCode(code));
+    }
+
+    @Operation(summary = "Buscar Ubicaciones", description = "Autocomplete para el inspector de propiedades.")
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
+    public ResponseEntity<List<String>> searchLocations(@RequestParam String query) {
+        return ResponseEntity.ok(manageLayoutUseCase.searchLocations(query));
+    }
+
+    @Operation(summary = "Estado del Rack", description = "Calcula ocupación y estado para el Heatmap.")
+    @GetMapping("/racks/{code}/summary")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
+    public ResponseEntity<RackSummaryDto> getRackSummary(@PathVariable String code) {
+        return ResponseEntity.ok(manageLayoutUseCase.getRackSummary(code));
     }
 
     // DTO Local

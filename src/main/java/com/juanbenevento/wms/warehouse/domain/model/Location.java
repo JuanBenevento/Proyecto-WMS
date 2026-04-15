@@ -5,6 +5,7 @@ import com.juanbenevento.wms.shared.domain.exception.LocationCapacityExceededExc
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -62,6 +63,21 @@ public class Location {
 
     public boolean isStorage() {
         return !isOperational();
+    }
+
+    /**
+     * Calcula el porcentaje de capacidad disponible basado en volumen.
+     * @return porcentaje de volumen libre (0-100)
+     */
+    public double getAvailableCapacity() {
+        if (maxVolume.compareTo(BigDecimal.ZERO) == 0) {
+            return 0.0;
+        }
+        BigDecimal availableVolume = maxVolume.subtract(currentVolume);
+        return availableVolume
+                .divide(maxVolume, 2, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .doubleValue();
     }
 
     public void consolidateLoad(InventoryItem newItem) {

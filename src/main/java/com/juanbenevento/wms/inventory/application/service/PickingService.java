@@ -9,6 +9,8 @@ import com.juanbenevento.wms.shared.domain.exception.DomainException;
 import com.juanbenevento.wms.inventory.domain.model.InventoryItem;
 import com.juanbenevento.wms.inventory.domain.model.InventoryStatus;
 import com.juanbenevento.wms.warehouse.domain.model.Location;
+import com.juanbenevento.wms.shared.domain.valueobject.Lpn;
+import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -19,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -66,17 +67,16 @@ public class PickingService implements AllocateStockUseCase {
                 location.consolidateLoad(item);
                 inventoryRepository.save(item);
 
-                InventoryItem reservedPart = new InventoryItem(
+                InventoryItem reservedPart = InventoryItem.createReceived(
                         generatePickingLpn(),
                         item.getProductSku(),
                         item.getProduct(),
                         quantityToTake,
                         item.getBatchNumber(),
                         item.getExpiryDate(),
-                        InventoryStatus.RESERVED,
-                        item.getLocationCode(),
-                        null
+                        item.getLocationCode()
                 );
+                reservedPart.setStatus(InventoryStatus.RESERVED);
 
                 location.consolidateLoad(reservedPart);
                 inventoryRepository.save(reservedPart);
@@ -91,8 +91,12 @@ public class PickingService implements AllocateStockUseCase {
         ));
     }
 
-    private String generatePickingLpn() {
-        return "PICK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    private Lpn generatePickingLpn() {
+        String uuid = java.util.UUID.randomUUID().toString()
+                .replace("-", "")
+                .substring(0, 8)
+                .toUpperCase();
+        return Lpn.fromRaw(WmsConstants.PICK_PREFIX + uuid);
     }
 
     private String getCurrentUser() {

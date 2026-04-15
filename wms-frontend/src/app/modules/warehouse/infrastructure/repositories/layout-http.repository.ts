@@ -16,7 +16,7 @@ export class LayoutHttpRepository extends LayoutRepository {
   constructor(private http: HttpClient) { super(); }
 
   getLayout(): Observable<{ layoutJson: string; lastUpdate: Date }> {
-    return this.http.get<LayoutDto>(`${this.BASE_URL}/getLayout`)
+    return this.http.get<LayoutDto>(`${this.BASE_URL}`)
       .pipe(
         map(dto => LayoutMapper.toDomain(dto))
       );
@@ -27,7 +27,7 @@ export class LayoutHttpRepository extends LayoutRepository {
         layoutJson: json 
     };
 
-    return this.http.post<void>(`${this.BASE_URL}/saveLayout`, payload);
+    return this.http.put<void>(`${this.BASE_URL}`, payload);
   }
 
 

@@ -57,7 +57,7 @@ public class InternalOperationsService implements PutAwayUseCase, ManageInventor
         inventoryRepository.save(item);
 
         eventPublisher.publishEvent(new StockMovedEvent(
-                item.getLpn(),
+                item.getLpn().getValue(),
                 item.getProductSku(),
                 item.getQuantity(),
                 oldLoc.getLocationCode(),
@@ -89,7 +89,7 @@ public class InternalOperationsService implements PutAwayUseCase, ManageInventor
         inventoryRepository.save(item);
 
         eventPublisher.publishEvent(new StockMovedEvent(
-                item.getLpn(),
+                item.getLpn().getValue(),
                 item.getProductSku(),
                 item.getQuantity(),
                 oldLoc.getLocationCode(),
@@ -128,7 +128,7 @@ public class InternalOperationsService implements PutAwayUseCase, ManageInventor
         inventoryRepository.save(item);
 
         eventPublisher.publishEvent(new InventoryAdjustedEvent(
-                item.getLpn(), item.getProductSku(), oldQty, newQty,
+                item.getLpn().getValue(), item.getProductSku(), oldQty, newQty,
                 command.reason(), location.getLocationCode(), getCurrentUser(), LocalDateTime.now()
         ));
     }

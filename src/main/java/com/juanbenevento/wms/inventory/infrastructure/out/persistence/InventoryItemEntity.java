@@ -1,6 +1,10 @@
 package com.juanbenevento.wms.inventory.infrastructure.out.persistence;
 
 import com.juanbenevento.wms.inventory.domain.model.InventoryStatus;
+import com.juanbenevento.wms.shared.domain.valueobject.BatchNumber;
+import com.juanbenevento.wms.shared.domain.valueobject.Lpn;
+import com.juanbenevento.wms.shared.infrastructure.persistence.BatchNumberConverter;
+import com.juanbenevento.wms.shared.infrastructure.persistence.LpnConverter;
 import com.juanbenevento.wms.shared.infrastructure.adapter.out.persistence.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -17,16 +21,21 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @SuperBuilder
 public class InventoryItemEntity extends AuditableEntity {
+    
     @Id
-    @Column(name = "lpn")
-    private String lpn;
+    @Column(name = "lpn", length = 50)
+    @Convert(converter = LpnConverter.class)
+    private Lpn lpn;
 
     @Column(nullable = false)
     private String productSku;
 
     private BigDecimal quantity;
 
-    private String batchNumber;
+    @Column(name = "batch_number", length = 50)
+    @Convert(converter = BatchNumberConverter.class)
+    private BatchNumber batchNumber;
+    
     private LocalDate expiryDate;
 
     @Enumerated(EnumType.STRING)
@@ -34,5 +43,4 @@ public class InventoryItemEntity extends AuditableEntity {
 
     @Column(nullable = false)
     private String locationCode;
-
 }

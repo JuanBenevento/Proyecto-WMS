@@ -12,12 +12,12 @@ public class InventoryMapper {
     public InventoryItemResponse toItemResponse(InventoryItem item) {
         if (item == null) return null;
         return new InventoryItemResponse(
-                item.getLpn(),
+                item.getLpn().getValue(),  // Lpn -> String
                 item.getProductSku(),
                 (item.getProduct() != null) ? item.getProduct().getName() : "Desconocido",
                 item.getQuantity(),
                 (item.getStatus() != null) ? item.getStatus().name() : "N/A",
-                item.getBatchNumber(),
+                item.getBatchNumber().getValue(),  // BatchNumber -> String
                 item.getExpiryDate(),
                 item.getLocationCode()
         );
@@ -38,13 +38,12 @@ public class InventoryMapper {
                 .build();
     }
 
-    // Entity -> Domain
+    // Entity -> Domain (reconstrucción sin Product)
     public InventoryItem toItemDomain(InventoryItemEntity entity) {
         if (entity == null) return null;
-        return new InventoryItem(
+        return InventoryItem.fromRepository(
                 entity.getLpn(),
                 entity.getProductSku(),
-                null,
                 entity.getQuantity(),
                 entity.getBatchNumber(),
                 entity.getExpiryDate(),

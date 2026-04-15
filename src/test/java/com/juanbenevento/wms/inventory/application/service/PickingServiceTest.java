@@ -6,7 +6,9 @@ import com.juanbenevento.wms.inventory.domain.model.InventoryItem;
 import com.juanbenevento.wms.inventory.domain.model.InventoryStatus;
 import com.juanbenevento.wms.warehouse.application.port.out.LocationRepositoryPort;
 import com.juanbenevento.wms.catalog.domain.model.Product;
+import com.juanbenevento.wms.shared.domain.valueobject.BatchNumber;
 import com.juanbenevento.wms.shared.domain.valueobject.Dimensions;
+import com.juanbenevento.wms.shared.domain.valueobject.Lpn;
 import com.juanbenevento.wms.warehouse.domain.model.Location;
 import com.juanbenevento.wms.warehouse.domain.model.ZoneType;
 import org.junit.jupiter.api.Test;
@@ -40,9 +42,9 @@ class PickingServiceTest {
         Product product = new Product(UUID.randomUUID(), sku, "P", "D",
                 new Dimensions(new BigDecimal("1.0"), new BigDecimal("1.0"), new BigDecimal("1.0"), new BigDecimal("1.0")), 1L);
 
-        InventoryItem originalItem = new InventoryItem(
-                "LPN-ORIGINAL", sku, product, new BigDecimal("10.0"), "B1",
-                LocalDate.now(), InventoryStatus.AVAILABLE, locCode, 1L
+        InventoryItem originalItem = InventoryItem.createReceived(
+                Lpn.fromRaw("LPN-ORIGINAL"), sku, product, new BigDecimal("10.0"),
+                BatchNumber.of("B1"), LocalDate.now(), locCode
         );
 
         Location location = Location.createRackPosition(
@@ -62,7 +64,7 @@ class PickingServiceTest {
 
         doAnswer(invocation -> {
             InventoryItem itemGuardado = invocation.getArgument(0);
-            if (itemGuardado.getLpn().equals("LPN-ORIGINAL")) {
+            if (itemGuardado.getLpn().getValue().equals("LPN-ORIGINAL")) {
                 // Validación con compareTo para BigDecimal
                 if (itemGuardado.getQuantity().compareTo(new BigDecimal("6.0")) != 0) {
                     throw new RuntimeException("Error: Cantidad esperada 6.0 pero fue " + itemGuardado.getQuantity());
