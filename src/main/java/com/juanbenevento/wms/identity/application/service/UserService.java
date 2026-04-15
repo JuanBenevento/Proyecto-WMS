@@ -3,7 +3,7 @@ package com.juanbenevento.wms.identity.application.service;
 import com.juanbenevento.wms.identity.application.mapper.UserMapper;
 import com.juanbenevento.wms.identity.application.port.in.command.CreateUserCommand; // <--- Nuevo
 import com.juanbenevento.wms.identity.application.port.in.dto.UserResponse;
-import com.juanbenevento.wms.identity.application.port.in.usescases.ManageUserUseCase;
+import com.juanbenevento.wms.identity.application.port.in.usecases.ManageUserUseCase;
 import com.juanbenevento.wms.identity.application.port.out.UserRepositoryPort;
 import com.juanbenevento.wms.shared.domain.exception.DomainException;
 import com.juanbenevento.wms.identity.domain.exception.UserAlreadyExistsException;

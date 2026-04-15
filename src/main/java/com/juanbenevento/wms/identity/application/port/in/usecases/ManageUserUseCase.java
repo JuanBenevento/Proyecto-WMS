@@ -1,4 +1,4 @@
-package com.juanbenevento.wms.identity.application.port.in.usescases;
+package com.juanbenevento.wms.identity.application.port.in.usecases;
 
 import com.juanbenevento.wms.identity.application.port.in.command.CreateUserCommand;
 import com.juanbenevento.wms.identity.application.port.in.dto.UserResponse;

@@ -4,7 +4,7 @@ import com.juanbenevento.wms.identity.application.mapper.TenantMapper;
 import com.juanbenevento.wms.identity.application.port.in.command.OnboardCompanyCommand;
 import com.juanbenevento.wms.identity.application.port.in.command.UpdateTenantCommand;
 import com.juanbenevento.wms.identity.application.port.in.dto.TenantResponse;
-import com.juanbenevento.wms.identity.application.port.in.usescases.ManageSaaSUseCase;
+import com.juanbenevento.wms.identity.application.port.in.usecases.ManageSaaSUseCase;
 import com.juanbenevento.wms.identity.application.port.out.TenantRepositoryPort;
 import com.juanbenevento.wms.identity.application.port.out.UserRepositoryPort;
 import com.juanbenevento.wms.shared.domain.exception.DomainException;

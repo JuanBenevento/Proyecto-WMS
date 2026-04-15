@@ -1,4 +1,4 @@
-package com.juanbenevento.wms.identity.application.port.in.usescases;
+package com.juanbenevento.wms.identity.application.port.in.usecases;
 
 public interface LoginUseCase {
     AuthResponse login(LoginCommand command);

@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.identity.application.service;
 
-import com.juanbenevento.wms.identity.application.port.in.usescases.LoginUseCase;
+import com.juanbenevento.wms.identity.application.port.in.usecases.LoginUseCase;
 import com.juanbenevento.wms.identity.application.port.out.TenantRepositoryPort;
 import com.juanbenevento.wms.identity.application.port.out.UserRepositoryPort;
 import com.juanbenevento.wms.shared.domain.exception.DomainException;
