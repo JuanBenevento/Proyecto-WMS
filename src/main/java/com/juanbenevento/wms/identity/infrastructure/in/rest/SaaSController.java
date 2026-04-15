@@ -3,7 +3,7 @@ package com.juanbenevento.wms.identity.infrastructure.in.rest;
 import com.juanbenevento.wms.identity.application.port.in.command.OnboardCompanyCommand;
 import com.juanbenevento.wms.identity.application.port.in.command.UpdateTenantCommand;
 import com.juanbenevento.wms.identity.application.port.in.dto.TenantResponse;
-import com.juanbenevento.wms.identity.application.port.in.usescases.ManageSaaSUseCase;
+import com.juanbenevento.wms.identity.application.port.in.usecases.ManageSaaSUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;

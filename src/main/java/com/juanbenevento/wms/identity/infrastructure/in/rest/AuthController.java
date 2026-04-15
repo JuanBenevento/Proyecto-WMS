@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.identity.infrastructure.in.rest;
 
-import com.juanbenevento.wms.identity.application.port.in.usescases.LoginUseCase;
+import com.juanbenevento.wms.identity.application.port.in.usecases.LoginUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;

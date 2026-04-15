@@ -2,7 +2,7 @@ package com.juanbenevento.wms.identity.infrastructure.in.rest;
 
 import com.juanbenevento.wms.identity.application.port.in.command.CreateUserCommand;
 import com.juanbenevento.wms.identity.application.port.in.dto.UserResponse;
-import com.juanbenevento.wms.identity.application.port.in.usescases.ManageUserUseCase;
+import com.juanbenevento.wms.identity.application.port.in.usecases.ManageUserUseCase;
 import com.juanbenevento.wms.identity.domain.model.Role;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
