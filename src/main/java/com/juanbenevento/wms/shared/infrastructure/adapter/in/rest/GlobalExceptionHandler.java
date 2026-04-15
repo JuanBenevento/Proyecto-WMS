@@ -44,7 +44,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(LocationCapacityExceededException.class)
     public ResponseEntity<ErrorResponse> handleCapacityExceeded(LocationCapacityExceededException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, "Capacidad Excedida", ex.getMessage(), request);
+        log.warn("Límite físico excedido: {}", ex.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, "Capacidad Física Excedida", ex.getMessage(), request);
     }
 
     @ExceptionHandler(IllegalStateException.class)
@@ -54,7 +55,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDatabaseConstraint(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, "Violación de Integridad de Datos", "No se puede realizar la operación porque el registro está en uso o duplica un dato único.", request);
+        log.warn("Bloqueo de Integridad Relacional en {}: {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
+
+        String mensajeUsuario = "No se puede realizar la operación porque el registro está en uso o duplica un dato único.";
+
+        // Detectar mensajes específicos de idempotencia
+        if (ex.getMessage() != null && ex.getMessage().contains("processed_requests")) {
+            mensajeUsuario = "Su solicitud ya está siendo procesada. Operación duplicada bloqueada por seguridad.";
+        }
+
+        return buildResponse(HttpStatus.CONFLICT, "Violación de Integridad Concurrente", mensajeUsuario, request);
     }
 
     // =================================================================================
@@ -63,9 +73,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ErrorResponse> handleConcurrencyError(Exception ex, HttpServletRequest request) {
-        String mensajeUsuario = "El registro fue modificado por otro usuario mientras usted trabajaba. " +
-                "Por favor, actualice la página e intente nuevamente.";
-        return buildResponse(HttpStatus.CONFLICT, "Datos Desactualizados", mensajeUsuario, request);
+        log.warn("Colisión de versión (Optimistic Lock) en {}", request.getRequestURI());
+        String mensajeUsuario = "El registro fue modificado por otro operario mientras usted trabajaba. " +
+                "Por favor, actualice la información e intente nuevamente.";
+        return buildResponse(HttpStatus.CONFLICT, "Datos Desactualizados (Colisión)", mensajeUsuario, request);
     }
 
     // =================================================================================
@@ -79,7 +90,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Parámetro Inválido", ex.getMessage(), request);
+        if (ex.getMessage() != null && ex.getMessage().contains("Idempotency-Key")) {
+            log.error("Contrato HTTP inválido (Frontend no envió Idempotency-Key): {}", ex.getMessage());
+            return buildResponse(HttpStatus.BAD_REQUEST, "Contrato HTTP Inválido", ex.getMessage(), request);
+        }
+        return buildResponse(HttpStatus.BAD_REQUEST, "Argumento Inválido", ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -111,9 +126,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex, HttpServletRequest request) {
-        log.error("🔥 ERROR CRÍTICO NO CONTROLADO en {}: ", request.getRequestURI(), ex);
+        log.error("ERROR CRÍTICO NO CONTROLADO en {}: ", request.getRequestURI(), ex);
 
-        // AL CLIENTE: Mensaje genérico seguro
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Error Interno del Servidor",
