@@ -1,0 +1,134 @@
+package com.juanbenevento.wms.inventory.infrastructure.in.rest;
+
+import com.juanbenevento.wms.inventory.application.port.in.command.InternalMoveCommand;
+import com.juanbenevento.wms.inventory.application.port.in.command.InventoryAdjustmentCommand;
+import com.juanbenevento.wms.inventory.application.port.in.command.PutAwayInventoryCommand;
+import com.juanbenevento.wms.inventory.application.port.in.command.ReceiveInventoryCommand;
+import com.juanbenevento.wms.inventory.application.port.in.dto.InventoryItemResponse;
+import com.juanbenevento.wms.inventory.application.port.in.dto.LocationSuggestionResponse;
+import com.juanbenevento.wms.inventory.application.port.in.usecases.ManageInventoryOperationsUseCase;
+import com.juanbenevento.wms.inventory.application.port.in.usecases.PutAwayUseCase;
+import com.juanbenevento.wms.inventory.application.port.in.usecases.ReceiveInventoryUseCase;
+import com.juanbenevento.wms.inventory.application.port.in.usecases.RetrieveInventoryUseCase;
+import com.juanbenevento.wms.shared.infrastructure.idempotency.Idempotent;
+import com.juanbenevento.wms.warehouse.application.port.in.usecases.SuggestLocationUseCase;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/inventory")
+@RequiredArgsConstructor
+@Tag(name = "3. Operaciones de Inventario (Inbound)", description = "Recepción, control de calidad y movimientos.")
+public class InventoryController {
+
+    private final ReceiveInventoryUseCase receiveInventoryUseCase;
+    private final PutAwayUseCase putAwayUseCase;
+    private final ManageInventoryOperationsUseCase operationsUseCase;
+    private final RetrieveInventoryUseCase retrieveInventoryUseCase;
+    private final SuggestLocationUseCase suggestLocationUseCase;
+
+    @Operation(summary = "Ver stock real", description = "Lista todos los items con su LPN y estado.")
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
+    public ResponseEntity<List<InventoryItemResponse>> getAllInventory() {
+        return ResponseEntity.ok(retrieveInventoryUseCase.getAllInventory());
+    }
+
+    @Operation(summary = "Recepción de Mercadería", description = "Genera LPN y valida capacidad física de la ubicación.")
+    @PostMapping("/receive")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
+    @Idempotent
+    @Transactional
+    public ResponseEntity<InventoryItemResponse> receiveInventory(@RequestBody @Valid ReceiveInventoryRequest request) {
+        ReceiveInventoryCommand command = new ReceiveInventoryCommand(
+                request.productSku(), request.quantity(), request.locationCode(),
+                request.batchNumber(), request.expiryDate()
+        );
+        return new ResponseEntity<>(receiveInventoryUseCase.receiveInventory(command), HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "Confirmar Ubicación (Put-Away)", description = "Mueve stock de recepción a su ubicación final.")
+    @PutMapping("/put-away")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
+    public ResponseEntity<Void> putAway(@RequestBody @Valid PutAwayRequest request) {
+        PutAwayInventoryCommand command = new PutAwayInventoryCommand(
+                request.lpn(), request.targetLocationCode()
+        );
+        putAwayUseCase.putAwayInventory(command);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Consultar Estrategia", description = "El sistema sugiere dónde guardar según el perfil del producto.")
+    @GetMapping("/suggest-location")
+    public ResponseEntity<LocationSuggestionResponse> suggestLocation(@RequestParam String sku, @RequestParam BigDecimal quantity) {
+        return ResponseEntity.ok(suggestLocationUseCase.suggestBestLocation(sku, quantity));
+    }
+
+    @Operation(summary = "Movimiento Interno", description = "Mueve un LPN de una ubicación a otra validando capacidades.")
+    @PostMapping("/move")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'OPERATOR')")
+    @Idempotent
+    @Transactional
+    public ResponseEntity<Void> internalMove(@RequestBody @Valid InternalMoveRequest request) {
+        InternalMoveCommand command = new InternalMoveCommand(
+                request.lpn(), request.targetLocationCode(), request.reason()
+        );
+        operationsUseCase.processInternalMove(command);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Ajuste de Inventario", description = "Modifica la cantidad de un LPN (Pérdida/Ganancia). Solo ADMIN.")
+    @PostMapping("/adjust")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @Idempotent
+    @Transactional
+    public ResponseEntity<Void> adjustInventory(@RequestBody @Valid InventoryAdjustmentRequest request) {
+        InventoryAdjustmentCommand command = new InventoryAdjustmentCommand(
+                request.lpn(), request.newQuantity(), request.reason()
+        );
+        operationsUseCase.processInventoryAdjustment(command);
+        return ResponseEntity.ok().build();
+    }
+
+    // --- DTOs WEB (Request Body) ---
+    // Estos DTOs son específicos de la capa Web (Input).
+    // Podrían ir en un paquete 'request' separado, pero como records internos quedan limpios aquí.
+
+    public record ReceiveInventoryRequest(
+            @Schema(example = "TV-LG-65") @NotBlank String productSku,
+            @Schema(example = "10.0") @NotNull @Min(1) BigDecimal quantity,
+            @Schema(example = "A-01-01-1") @NotBlank String locationCode,
+            @Schema(example = "LOTE-2025") @NotBlank String batchNumber,
+            @Schema(example = "2030-12-31") @NotNull LocalDate expiryDate
+    ) {}
+
+    public record PutAwayRequest(
+            @Schema(example = "LPN-173...") @NotBlank String lpn,
+            @Schema(example = "A-01-01-1") @NotBlank String targetLocationCode
+    ) {}
+
+    public record InternalMoveRequest(
+            @Schema(example = "LPN-173...") @NotBlank String lpn,
+            @Schema(example = "B-02-02") @NotBlank String targetLocationCode,
+            @Schema(example = "Reorganización") String reason
+    ) {}
+
+    public record InventoryAdjustmentRequest(
+            @Schema(example = "LPN-173...") @NotBlank String lpn,
+            @Schema(example = "5.0") @NotNull @Min(0) BigDecimal newQuantity,
+            @Schema(example = "Dañado / Pérdida") @NotBlank String reason
+    ) {}
+}

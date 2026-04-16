@@ -1,0 +1,177 @@
+<div class="space-y-6">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Gestión de Empresas</h2>
+          <p class="text-sm text-slate-500 mt-1">Supervise y administre las empresas registradas en la plataforma.</p>
+        </div>
+        
+        <a routerLink="/saas/onboarding" 
+           class="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-medium shadow-sm hover:shadow-md gap-2">
+           <i class="bi bi-plus-lg text-lg"></i>
+           <span>Nueva Empresa</span>
+        </a>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th scope="col" class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Empresa</th>
+                <th scope="col" class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tenant ID</th>
+                <th scope="col" class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                <th scope="col" class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Acciones</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+              
+              <tr *ngFor="let tenant of tenants" class="group hover:bg-slate-50/80 transition-colors duration-150">
+                
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center gap-4">
+                    <div class="h-10 w-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
+                      {{ tenant.name.charAt(0) | uppercase }}
+                    </div>
+                    <div>
+                      <div class="font-medium text-slate-900">{{ tenant.name }}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                    {{ tenant.id }}
+                  </span>
+                </td>
+
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+                        [ngClass]="tenant.isActive 
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                          : 'bg-red-50 text-red-700 border-red-200'">
+                    
+                    <span class="w-1.5 h-1.5 rounded-full mr-1.5"
+                          [ngClass]="tenant.isActive ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                    {{ tenant.isActive ? 'Activo' : 'Suspendido' }}
+                  </span>
+                </td>
+
+                <td class="px-6 py-4 whitespace-nowrap text-right">
+
+                  <button (click)="openEditModal(tenant)" 
+                          class="mr-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-md transition-colors"
+                          title="Editar información">
+                      <i class="bi bi-pencil-square text-lg"></i>
+                  </button>
+                  
+                  <button (click)="toggleStatus(tenant)"
+                          [disabled]="loadingId === tenant.id"
+                          class="group relative inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          [ngClass]="tenant.isActive 
+                              ? 'text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300' 
+                              : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300'">
+                      
+                      <span *ngIf="loadingId === tenant.id" class="absolute flex h-3 w-3">
+                          <span class="animate-spin h-3 w-3 rounded-full border-2 border-current border-t-transparent"></span>
+                      </span>
+
+                      <span class="flex items-center gap-1" [class.opacity-0]="loadingId === tenant.id">
+                          <i class="bi" [ngClass]="tenant.isActive ? 'bi-power' : 'bi-check-circle-fill'"></i>
+                          {{ tenant.isActive ? 'Suspender' : 'Habilitar' }}
+                      </span>
+
+                  </button>
+
+                </td>
+
+              </tr>
+
+              <tr *ngIf="tenants.length === 0">
+                <td colspan="4" class="px-6 py-16 text-center">
+                  <div class="flex flex-col items-center justify-center">
+                    <div class="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center mb-3">
+                      <i class="bi bi-buildings text-slate-400 text-xl"></i>
+                    </div>
+                    <h3 class="text-slate-900 font-medium mb-1">No hay empresas registradas</h3>
+                    <p class="text-slate-500 text-sm max-w-xs mx-auto mb-4">
+                      Comience dando de alta su primer cliente SaaS para gestionar sus operaciones.
+                    </p>
+                    <a routerLink="/saas/onboarding" class="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
+                      Crear primera empresa &rarr;
+                    </a>
+                  </div>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500" *ngIf="tenants.length > 0">
+          <span>Mostrando {{ tenants.length }} resultados</span>
+          <div class="flex gap-2">
+            <button class="disabled:opacity-50 hover:text-slate-800" disabled>Anterior</button>
+            <button class="hover:text-slate-800">Siguiente</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div *ngIf="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+    
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" (click)="closeModal()"></div>
+
+    <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
+        
+        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <h3 class="text-lg font-semibold text-slate-800">Editar Empresa</h3>
+            <button (click)="closeModal()" class="text-slate-400 hover:text-slate-600">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <form [formGroup]="editForm" (ngSubmit)="submitEdit()">
+            <div class="p-6 space-y-4">
+                
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Tenant ID</label>
+                    <input type="text" formControlName="id" 
+                           class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-slate-500 text-sm focus:outline-none cursor-not-allowed">
+                    <p class="text-[10px] text-slate-400 mt-1">El ID no se puede modificar por seguridad.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nombre de la Empresa</label>
+                    <input type="text" formControlName="name" 
+                           class="w-full border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Email de Contacto</label>
+                    <input type="email" formControlName="contactEmail" 
+                           class="w-full border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+
+            </div>
+
+            <div class="px-6 py-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100">
+                <button type="button" (click)="closeModal()" 
+                        class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 rounded-lg transition-colors">
+                    Cancelar
+                </button>
+                
+                <button type="submit" [disabled]="editForm.invalid || isSaving"
+                        class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                    <span *ngIf="isSaving" class="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full"></span>
+                    {{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>

@@ -2,33 +2,74 @@
 
 ## 📌 Descripción General
 
-Este proyecto es un **Warehouse Management System (WMS)** desarrollado como proyecto personal con el objetivo de **demostrar competencias técnicas reales en ingeniería de software**, particularmente en el diseño y construcción de sistemas empresariales backend y full stack.
+Este proyecto es un **Warehouse Management System (WMS)** desarrollado con arquitectura hexagonal y principios DDD.
 
 El sistema modela operaciones centrales de un almacén:
 
 * Gestión de productos
 * Control de inventario
 * Ubicaciones físicas con restricciones de capacidad
-* Movimientos de stock (recepción, reserva, despacho)
+* Movimientos de stock (recepción, reserva, picking, despacho)
+* **Gestión de órdenes (Order Management)**
 * Auditoría mediante eventos de dominio
 
 El foco principal del proyecto está puesto en:
 
 * **Arquitectura limpia (Hexagonal / Clean Architecture)**
+* **Event-Driven Architecture** con Event Bus y retry/DLQ
 * **Reglas de negocio explícitas**
 * **Separación de responsabilidades**
 * **Escalabilidad y mantenibilidad**
 
 ---
 
-## 🧠 Motivación del Proyecto
+## 🚀 Quick Start
 
-La mayoría de los proyectos junior se limitan a CRUD simples. Este WMS fue diseñado intencionalmente para:
+### Prerequisites
+- Java 21
+- Maven 3.9+
+- PostgreSQL 16 (para desarrollo local)
+- H2 (base de datos en memoria para tests)
 
-* Simular un **sistema real de la industria**
-* Aplicar principios de arquitectura utilizados en equipos profesionales
-* Practicar modelado de dominio y reglas de negocio
-* Servir como **prueba técnica viva** para procesos de selección laboral
+### Setup
+
+```bash
+# Clonar el repositorio
+git clone https://github.com/JuanBenevento/Proyecto-WMS.git
+cd Proyecto-WMS
+
+# Ejecutar con Maven (usa H2 en memoria por defecto)
+./mvnw spring-boot:run
+```
+
+La API estará disponible en: `http://localhost:8080`
+
+### Tests
+
+```bash
+# Ejecutar todos los tests
+./mvnw test
+```
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+src/
+├── main/java/com/juanbenevento/wms/
+│   ├── catalog/           # Dominio de Catálogo de Productos
+│   ├── identity/          # Gestión de Usuarios y Tenants
+│   ├── inventory/         # Core de Inventario
+│   ├── orders/            # Gestión de Órdenes
+│   ├── warehouse/         # Gestión de Ubicaciones
+│   ├── shared/            # Código compartido (Value Objects, excepciones)
+│   │
+│   ├── domain/           # Entidades, Value Objects, Eventos
+│   ├── application/      # Casos de uso, Servicios, Commands, DTOs
+│   └── infrastructure/    # Adapters (REST, JPA, etc.)
+└── test/                  # Tests unitarios e integrados
+```
 
 ---
 
@@ -43,33 +84,60 @@ com.juanbenevento.wms
 └── infrastructure    # Adaptadores (REST, persistencia, seguridad)
 ```
 
-### Capas
+### Arquitectura de Eventos (Orders ↔ Inventory)
 
-* **Domain**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         ORDER SERVICE                             │
+│  OrderService.createOrder()                                      │
+│       │                                                           │
+│       ├── OrderCreatedEvent                                      │
+│       └── EventBus (InMemory + Retry/DLQ)                        │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     INVENTORY SERVICE                             │
+│  OrderAssignmentService detecta pedidos PENDING                  │
+│       │                                                           │
+│       ├── StockAssignedEvent (Spring Events)                     │
+│       └── InventoryEventBridge                                    │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   ORDER EVENT HANDLER                             │
+│  onStockAssigned() → Order.allocate()                          │
+│  onStockShortage() → Order.hold()                              │
+│  onPickingStarted() → Order.startPicking()                      │
+│  onPickingCompleted() → Order.pack()                             │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-  * Entidades ricas en comportamiento
-  * Validaciones de negocio
-  * Excepciones de dominio
-  * Eventos de dominio
+### Flujo de Picking con Short Pick Handling
 
-* **Application**
+```
+1. startPicking(orderId, decision)
+       │
+       ├── Crear PickingSession
+       └── PickingStartedEvent → Order.status = PICKING
 
-  * Casos de uso explícitos
-  * Commands como DTOs (Java Records)
-  * Interfaces (ports) desacopladas de la infraestructura
+2. pickLine(orderId, lineId, qty)
+       │
+       ├── Full Pick: qty == allocated
+       └── Short Pick: qty < allocated
+                    │
+                    └── Según decisión:
+                        - ALLOW_PARTIAL_SHIPMENT
+                        - BLOCK_UNTIL_COMPLETE
+                        - AUTO_REPLENISH
+                        - MANUAL_DECISION
 
-* **Infrastructure**
-
-  * Controladores REST
-  * Persistencia JPA
-  * Seguridad (JWT)
-  * Configuración técnica
-
-Esta estructura permite:
-
-* Reemplazar frameworks sin afectar el negocio
-* Testear reglas de negocio de forma aislada
-* Escalar el sistema sin degradar la mantenibilidad
+3. completePicking(orderId)
+       │
+       ├── PickingCompletedEvent
+       └── Order.status = PACKED
+```
 
 ---
 
@@ -79,23 +147,14 @@ El dominio no es anémico. Algunas reglas implementadas:
 
 * Un producto **no puede modificar sus dimensiones** si existe stock físico
 * Una ubicación **no puede exceder su capacidad** (peso / volumen)
-* Productos pesados requieren maquinaria especial
 * El inventario genera **eventos de dominio** ante cambios relevantes
-
-Ejemplos de conceptos modelados:
-
-* `Product`
-* `Dimensions`
-* `InventoryItem`
-* `Location`
-* Eventos como `StockReceivedEvent`, `InventoryAdjustedEvent`
+* **Order Management** con estados extensibles y razones configurables
 
 ---
 
 ## ⚙️ Stack Tecnológico
 
 ### Backend
-
 * **Java 21**
 * **Spring Boot 3**
 * Spring Data JPA
@@ -104,79 +163,50 @@ Ejemplos de conceptos modelados:
 * SpringDoc OpenAPI (Swagger)
 
 ### Frontend
-
 * **Angular 20**
 * Arquitectura modular por features
-
-### DevOps / Tooling
-
-* Maven Wrapper
-* GitHub Actions (CI)
-* PostgreSQL como servicio en CI
 
 ---
 
 ## 🧪 Testing
 
 * Tests unitarios enfocados en el **dominio y reglas de negocio**
+* Tests de servicio con mocks
 * Validaciones de invariantes críticas
-* Context load con seguridad simulada
-
-> El objetivo del testing no es la cobertura numérica, sino la **confianza en las reglas del negocio**.
 
 ---
 
-## 🔐 Seguridad
+## 🔌 API Endpoints
 
-* Autenticación basada en JWT
-* Integración con Spring Security
-* Separación clara entre seguridad y lógica de negocio
+### Orders
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/v1/orders` | Crear orden |
+| GET | `/api/v1/orders/{id}` | Obtener orden |
+| GET | `/api/v1/orders` | Listar órdenes |
+| POST | `/api/v1/orders/{id}/confirm` | Confirmar |
+| POST | `/api/v1/orders/{id}/cancel` | Cancelar |
+| POST | `/api/v1/orders/{id}/hold` | Poner en espera |
+| POST | `/api/v1/orders/{id}/ship` | Enviar |
 
----
+### Inventory
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/v1/inventory/receive` | Recibir mercancía |
+| POST | `/api/v1/inventory/put-away` | Ubicar en almacén |
 
-## 🚀 CI/CD
-
-El proyecto cuenta con integración continua mediante **GitHub Actions**:
-
-* Build automático en ramas `dev` y `main`
-* Ejecución de tests
-* Base de datos PostgreSQL levantada como servicio
-
-Esto garantiza que el proyecto sea **ejecutable y verificable en cualquier entorno**.
-
----
-
-## 🖥️ Frontend
-
-El frontend está organizado por dominios funcionales:
-
-* Inventory
-* Warehouse
-* Admin
-* Authentication
-
-Se priorizó la escalabilidad estructural sobre el diseño visual, dado que el foco del proyecto es **arquitectónico y de negocio**.
-
----
-
-## 📈 Próximos Pasos / Roadmap
-
-Algunas mejoras planificadas:
-
-* Tests de integración con Testcontainers
-* Diagramas C4 (Context / Container)
-* Auditoría avanzada (createdBy / timestamps)
-* Manejo unificado de errores (Problem Details)
-* Despliegue en entorno cloud
+### Picking
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/v1/picking/start` | Iniciar picking |
+| POST | `/api/v1/picking/pick-line` | Registrar pick de línea |
+| POST | `/api/v1/picking/complete` | Completar picking |
 
 ---
 
 ## 👤 Autor
 
 **Juan Manuel Benevento**
-Técnico Universitario en Programación (UTN Mar del Plata)
-
-Proyecto desarrollado con fines educativos y profesionales, orientado a demostrar capacidad real de inserción laboral en equipos de desarrollo de software.
 
 ---
 

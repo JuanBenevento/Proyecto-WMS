@@ -188,18 +188,19 @@ classDiagram
         +double width
         +double depth
         +double weight
+        +calculateVolume() double
     }
 
-    class Batch {
-        +String batchNumber
-        +LocalDate manufacturingDate
-        +LocalDate expiryDate
+    class BatchNumber {
+        +String value
         +isValid() boolean
     }
     
-    class LPN {
-        +String code
-        +String barcodeType
+    class Lpn {
+        +String value
+        +isSentinel() boolean
+        +isPickingLpn() boolean
+        +generate() Lpn
     }
 
     %% MÉTODOS DE LA INTERFAZ
@@ -219,3 +220,27 @@ classDiagram
 * **Contexto:** Necesitamos gestionar lotes y estados variables (roto/sano) sin duplicar la información del producto base.
 * **Decisión:** Se crean dos entidades separadas. `Product` contiene la metadata estática y `InventoryItem` contiene la instancia física con su LPN.
 * **Consecuencia:** Mayor complejidad en las consultas (Joins), pero total flexibilidad en la gestión de almacén.
+
+---
+
+**ADR-002: Value Objects para Lpn y BatchNumber**
+* **Contexto:** Lpn y BatchNumber eran Strings sin validación, causando datos inválidos en la DB.
+* **Decisión:** Crear Value Objects inmutables con:
+  - `Lpn`: Valida formato `LPN-{8-CHARS}`, `PICK-{8-CHARS}`, sentinels
+  - `BatchNumber`: Valida longitud máx 50 chars, caracteres válidos
+* **Consecuencia:**
+  - Validación en el dominio, no en la infraestructura
+  - Inmutabilidad garantiza consistencia
+  - JPA Converters para persistencia transparente
+
+---
+
+**ADR-003: Estandarización API REST**
+* **Contexto:** Endpoints inconsistentes (`create`, `save`, `add`, etc.)
+* **Decisión:** Usar verbos HTTP según convención:
+  - `POST /receive` - Recibir mercancía
+  - `POST /put-away` - Ubicar en almacén
+  - `POST /move` - Mover entre ubicaciones
+  - `POST /adjust` - Ajustar inventario
+  - `POST /allocate` - Reservar stock para picking
+* **Consecuencia:** API predecible y documentable

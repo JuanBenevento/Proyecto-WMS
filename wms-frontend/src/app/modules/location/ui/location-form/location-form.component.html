@@ -1,0 +1,188 @@
+<div class="min-h-screen bg-gray-50/50 p-6 flex justify-center">
+  <div class="w-full max-w-3xl">
+    
+    <div class="mb-6">
+      <nav class="text-sm font-medium text-gray-500 mb-2">
+        <a routerLink="/admin/locations" class="hover:text-indigo-600 transition-colors">Ubicaciones</a> / 
+        <span class="text-gray-900">{{ isEditMode ? 'Editar' : 'Crear' }}</span>
+      </nav>
+      <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
+        {{ isEditMode ? 'Ajuste de Capacidades' : 'Nueva Ubicación' }}
+      </h1>
+      <p class="text-sm text-gray-500 mt-1">
+        {{ isEditMode ? 'Modifica los límites operativos de la posición.' : 'Define la topología física o zona operativa.' }}
+      </p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
+      
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+        
+        <label class="block text-sm font-medium text-gray-700 mb-2">Clasificación de la Zona</label>
+        <select formControlName="zoneType" 
+                class="block w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 py-3 px-4 text-base bg-white disabled:bg-gray-100 disabled:text-gray-500 transition-colors">
+            <optgroup label="Almacenamiento (Racks)">
+                <option *ngFor="let type of storageTypes" [value]="type.value">{{ type.label }}</option>
+            </optgroup>
+            <optgroup label="Áreas Operativas (Piso)">
+                <option *ngFor="let type of operationalTypes" [value]="type.value">{{ type.label }}</option>
+            </optgroup>
+        </select>
+        
+        <div *ngIf="isOperationalZone && !isEditMode" class="mt-3 text-sm text-blue-600 bg-blue-50 p-3 rounded-lg flex items-start gap-2 animate-fadeIn border border-blue-100">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Estás creando una <strong>Zona de Piso</strong>. Estas ubicaciones no tienen niveles verticales. Se identifican por un código único (Ej: REC-01).</span>
+        </div>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sm:p-8">
+        
+        <div *ngIf="!isOperationalZone" class="animate-fadeIn">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+               <span class="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg border border-indigo-100">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                 </svg>
+               </span>
+               Coordenadas del Rack
+            </h3>
+            
+            <div class="grid grid-cols-3 gap-6 mb-6">
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Pasillo</label>
+                <input type="text" formControlName="aislePart" maxlength="3"
+                       class="block w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 py-2.5 px-3 uppercase text-center font-bold disabled:bg-gray-100 disabled:text-gray-400"
+                       placeholder="A" [class.border-red-500]="form.get('aislePart')?.invalid && form.get('aislePart')?.touched">
+                
+                <div *ngIf="form.get('aislePart')?.touched && form.get('aislePart')?.invalid" class="mt-1">
+                    <p *ngIf="form.get('aislePart')?.hasError('required')" class="text-xs text-red-500">Requerido.</p>
+                    <p *ngIf="form.get('aislePart')?.hasError('pattern')" class="text-xs text-red-500">Solo letras/números.</p>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Columna</label>
+                <input type="text" formControlName="columnPart" maxlength="3"
+                       class="block w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 py-2.5 px-3 text-center font-bold disabled:bg-gray-100 disabled:text-gray-400"
+                       placeholder="01" [class.border-red-500]="form.get('columnPart')?.invalid && form.get('columnPart')?.touched">
+                
+                <div *ngIf="form.get('columnPart')?.touched && form.get('columnPart')?.invalid" class="mt-1">
+                    <p *ngIf="form.get('columnPart')?.hasError('required')" class="text-xs text-red-500">Requerido.</p>
+                    <p *ngIf="form.get('columnPart')?.hasError('pattern')" class="text-xs text-red-500">Solo números.</p>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nivel</label>
+                <input type="text" formControlName="levelPart" maxlength="2"
+                       class="block w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 py-2.5 px-3 text-center font-bold disabled:bg-gray-100 disabled:text-gray-400"
+                       placeholder="01" [class.border-red-500]="form.get('levelPart')?.invalid && form.get('levelPart')?.touched">
+                
+                <div *ngIf="form.get('levelPart')?.touched && form.get('levelPart')?.invalid" class="mt-1">
+                    <p *ngIf="form.get('levelPart')?.hasError('required')" class="text-xs text-red-500">Requerido.</p>
+                    <p *ngIf="form.get('levelPart')?.hasError('pattern')" class="text-xs text-red-500">Solo números.</p>
+                </div>
+              </div>
+            </div>
+        </div>
+
+        <div *ngIf="isOperationalZone" class="animate-fadeIn">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+               <span class="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg border border-emerald-100">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                 </svg>
+               </span>
+               Identificación de Zona
+            </h3>
+            
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Código Único</label>
+                <div class="flex gap-0 relative">
+                    <span class="inline-flex items-center px-4 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm font-bold shadow-sm">
+                        ID
+                    </span>
+                    <input type="text" formControlName="zoneCode" 
+                           class="block w-full rounded-r-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 py-2.5 px-3 uppercase font-bold tracking-wider disabled:bg-gray-100 disabled:text-gray-400 shadow-sm"
+                           placeholder="Ej: REC-01" 
+                           [class.border-red-500]="form.get('zoneCode')?.invalid && form.get('zoneCode')?.touched">
+                </div>
+                
+                <div *ngIf="form.get('zoneCode')?.touched && form.get('zoneCode')?.invalid" class="mt-1">
+                    <p *ngIf="form.get('zoneCode')?.hasError('required')" class="text-xs text-red-500 font-medium">El código es obligatorio.</p>
+                    <p *ngIf="form.get('zoneCode')?.hasError('pattern')" class="text-xs text-red-500">Formato inválido (Use letras, números y guiones).</p>
+                    <p *ngIf="form.get('zoneCode')?.hasError('minlength')" class="text-xs text-red-500">Mínimo 3 carácteres.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-50 rounded-lg p-5 border border-slate-200 text-center flex flex-col items-center justify-center transition-all shadow-inner">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">CÓDIGO DE UBICACIÓN</span>
+            <div class="text-3xl font-mono font-black text-slate-700 tracking-wider">
+                {{ generatedCode || '---' }}
+            </div>
+            <p *ngIf="isEditMode" class="text-xs text-amber-600 mt-2 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-100 flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
+                Identificador inmutable
+            </p>
+        </div>
+
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sm:p-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-6 border-b border-gray-100 pb-2">Límites Físicos</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Peso Máximo <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" formControlName="maxWeight" 
+                     class="block w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 py-2.5 pl-3 pr-10"
+                     [class.border-red-500]="form.get('maxWeight')?.invalid && form.get('maxWeight')?.touched">
+              <span class="absolute right-3 top-2.5 text-gray-400 text-sm font-bold">KG</span>
+            </div>
+            
+            <div *ngIf="form.get('maxWeight')?.touched && form.get('maxWeight')?.invalid" class="mt-1">
+                <p *ngIf="form.get('maxWeight')?.hasError('required')" class="text-xs text-red-500">Requerido.</p>
+                <p *ngIf="form.get('maxWeight')?.hasError('min')" class="text-xs text-red-500">Debe ser mayor a 0.</p>
+                <p *ngIf="form.get('maxWeight')?.hasError('min')" class="text-xs text-red-500 font-bold">
+                   No puede ser menor al peso ocupado actual.
+                </p>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Volumen Máximo <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" formControlName="maxVolume" 
+                     class="block w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 py-2.5 pl-3 pr-10"
+                     [class.border-red-500]="form.get('maxVolume')?.invalid && form.get('maxVolume')?.touched">
+              <span class="absolute right-3 top-2.5 text-gray-400 text-sm font-bold">CM³</span>
+            </div>
+             <p class="text-[10px] text-gray-400 mt-1">1 m³ = 1,000,000 cm³</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" routerLink="/admin/locations" 
+                class="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+          Cancelar
+        </button>
+        <button type="submit" 
+                [disabled]="form.invalid" 
+                class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200 transition-all active:scale-95">
+          {{ isEditMode ? 'Guardar Cambios' : 'Crear Ubicación' }}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>

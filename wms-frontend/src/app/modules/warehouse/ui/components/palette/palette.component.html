@@ -1,0 +1,21 @@
+<div class="w-20 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-4 h-full z-10 shadow-sm">
+    
+    <div class="mb-2 font-black text-indigo-600 text-xs tracking-widest">
+        BUILDER
+    </div>
+
+    <div *ngFor="let tool of tools" 
+         class="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing group hover:-translate-y-1 transition-transform"
+         draggable="true" 
+         (dragstart)="onDragStart($event, tool.type)">
+        
+        <div class="w-12 h-12 rounded-xl border-2 flex items-center justify-center transition-colors shadow-sm"
+             [ngClass]="tool.class">
+            <i [class]="tool.icon + ' text-xl'"></i>
+        </div>
+        
+        <span class="text-[10px] font-bold text-gray-400 group-hover:text-gray-600">
+            {{ tool.label }}
+        </span>
+    </div>
+</div>

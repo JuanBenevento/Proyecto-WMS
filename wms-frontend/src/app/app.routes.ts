@@ -1,73 +1,134 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './features/auth/login/login';
 import { authGuard } from './core/guards/auth-guard';
 import { roleGuard } from './core/guards/role-guard';
+import { InventoryRepository } from './modules/inventory/domain/ports/repository/inventory.repository';
+import { InventoryApiAdapter } from './modules/inventory/infrastructure/adapters/inventory-api.adapter';
+import { ReceiveInventoryUseCase } from './modules/inventory/application/usecases/inbound/receive-inventory.usecase';
+import { MoveInventoryUseCase } from './modules/inventory/application/usecases/internal/move-inventory.usecase';
+import { SuggestLocationUseCase } from './modules/inventory/application/usecases/internal/suggest-location.usecase';
+import { AllocateStockUseCase } from './modules/inventory/application/usecases/outbound/allocate-stock.usecase';
+import { ShipStockUseCase } from './modules/inventory/application/usecases/outbound/ship-stock.usecase';
+import { GetInventoryUseCase } from './modules/inventory/application/usecases/query/get-inventory.usecase';
+import { GetLayoutUseCase } from './modules/warehouse/application/usecases/get-layout.usecase';
+import { SaveLayoutUseCase } from './modules/warehouse/application/usecases/save-layout.usecase';
+import { LayoutRepository } from './modules/warehouse/domain/repositories/layout.repository';
+import { LayoutHttpRepository } from './modules/warehouse/infrastructure/repositories/layout-http.repository';
+import { GetRackSummaryUseCase } from './modules/warehouse/application/usecases/get-rack-summary.usecase';
 
+
+const INVENTORY_PROVIDERS = [
+  { provide: InventoryRepository, useClass: InventoryApiAdapter },
+  ReceiveInventoryUseCase,
+  MoveInventoryUseCase,
+  SuggestLocationUseCase,
+  AllocateStockUseCase,
+  ShipStockUseCase,
+  GetInventoryUseCase
+];
+
+const WAREHOUSE_PROVIDERS = [
+  { provide: LayoutRepository, useClass: LayoutHttpRepository},
+  GetLayoutUseCase,
+  SaveLayoutUseCase,
+  GetRackSummaryUseCase
+];
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
+  { 
+    path: 'login', 
+    loadComponent: () => import('./modules/auth/ui/login/login.component').then(m => m.LoginComponent) 
+  },
+
+  // --- SUPER ADMIN (SaaS) ---
   {
-    path: '',
-    canActivate: [authGuard], 
+    path: 'saas',
+    loadComponent: () => import('./core/layout/layouts/saas-layout.component').then(m => m.SaasLayoutComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'SUPER_ADMIN' },
+    loadChildren: () => import('./modules/super-admin/super-admin.routes').then(m => m.SUPER_ADMIN_ROUTES)
+  },
+
+  // --- ADMIN (Gerente) ---
+  {
+    path: 'admin',
+    loadComponent: () => import('./core/layout/layouts/admin-layout.component').then(m => m.AdminLayoutComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'ADMIN' }, 
+    providers: [...INVENTORY_PROVIDERS, ...WAREHOUSE_PROVIDERS],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { 
         path: 'dashboard', 
-        loadComponent: () => import('./features/warehouse/warehouse-map/warehouse-map')
-          .then(m => m.WarehouseMapComponent) 
+        loadComponent: () => import('./modules/warehouse/ui/pages/monitor-page/monitor-page.component').then(m => m.MonitorPageComponent) 
+      },
+      {
+        path: 'warehouse',
+        loadChildren: () => import('./modules/warehouse/warehouse.routes').then(m => m.WAREHOUSE_ROUTES)
       },
       { 
-        path: 'ingresos', 
-        loadComponent: () => import('./features/inventory/inventory-receive/inventory-receive')
-          .then(m => m.InventoryReceiveComponent) 
+        path: 'products', 
+        loadChildren: () => import('./modules/product/product.routes').then(m => m.PRODUCT_ROUTES) 
       },
       { 
-        path: 'ConfirmarUbicacion', 
-        loadComponent: () => import('./features/inventory/stock-movement/stock-movement')
-          .then(m => m.StockMovement) 
+        path: 'locations', 
+        loadChildren: () => import('./modules/location/location.routes').then(m => m.LOCATION_ROUTES) 
       },
       { 
-        path: 'inventario', 
-        loadComponent: () => import('./features/inventory/inventory-list/inventory-list')
-          .then(m => m.InventoryListComponent) 
+        path: 'audit', 
+        loadChildren: () => import('./modules/audit/audit.routes').then(m => m.AUDIT_ROUTES) 
       },
       { 
-        path: 'estrategia', 
-        loadComponent: () => import('./features/inventory/put-away-strategy/put-away-strategy')
-          .then(m => m.PutAwayStrategyComponent) 
+        path: 'users', 
+        loadComponent: () => import('./modules/admin/ui/user-management/user-management.component').then(m => m.UserManagementComponent) 
+      },
+   
+      { 
+        path: 'receive', 
+        loadComponent: () => import('./modules/inventory/ui/inventory-receive/receive.component').then(m => m.InventoryReceiveComponent) 
       },
       { 
-        path: 'salidas', 
-        loadComponent: () => import('./features/inventory/outbound/outbound')
-          .then(m => m.OutboundComponent) 
+        path: 'move',
+        loadComponent: () => import('./modules/inventory/ui/inventory-move/move.component').then(m => m.InventoryMoveComponent) 
       },
       { 
-        path: 'productos', 
-        loadComponent: () => import('./features/inventory/product-list/product-list')
-          .then(m => m.ProductListComponent) 
+        path: 'picking', 
+        loadComponent: () => import('./modules/inventory/ui/inventory-dispatch/dispatch.component').then(m => m.InventoryDispatchComponent) 
       },
       { 
-        path: 'ubicaciones', 
-        loadComponent: () => import('./features/warehouse/location-create/location-create')
-          .then(m => m.LocationCreateComponent),
-        canActivate: [roleGuard], 
-        data: { role: 'ADMIN' }
+        path: 'inventory', 
+        loadComponent: () => import('./modules/inventory/ui/inventory-list/inventory-list.component').then(m => m.InventoryListComponent) 
       },
-      { 
-        path: 'nuevo-producto', 
-        loadComponent: () => import('./features/inventory/product-create/product-create')
-          .then(m => m.ProductCreateComponent),
-        canActivate: [roleGuard], 
-        data: { role: 'ADMIN' } 
-      },
-      { 
-        path: 'usuarios', 
-        loadComponent: () => import('./features/admin/user-management/user-management')
-          .then(m => m.UserManagementComponent), 
-        canActivate: [roleGuard], 
-        data: { role: 'ADMIN' } 
-      }
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
-  { path: '**', redirectTo: '/dashboard' } 
+
+  // --- OPERATOR (Operario) ---
+  {
+    path: 'operation',
+    loadComponent: () => import('./core/layout/layouts/operator-layout.component').then(m => m.OperatorLayoutComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'OPERATOR' },
+    providers: [...INVENTORY_PROVIDERS],
+    children: [
+      { 
+        path: 'receive', 
+        loadComponent: () => import('./modules/inventory/ui/inventory-receive/receive.component').then(m => m.InventoryReceiveComponent) 
+      },
+      { 
+        path: 'move', 
+        loadComponent: () => import('./modules/inventory/ui/inventory-move/move.component').then(m => m.InventoryMoveComponent) 
+      },
+      { 
+        path: 'dispatch', 
+        loadComponent: () => import('./modules/inventory/ui/inventory-dispatch/dispatch.component').then(m => m.InventoryDispatchComponent) 
+      },
+      { 
+        path: 'inventory', 
+        loadComponent: () => import('./modules/inventory/ui/inventory-list/inventory-list.component').then(m => m.InventoryListComponent) 
+      },
+      { path: '', redirectTo: 'receive', pathMatch: 'full' }
+    ]
+  },
+
+  // Fallback
+  { path: '**', redirectTo: 'login' }
 ];

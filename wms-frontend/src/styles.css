@@ -1,1 +1,66 @@
-/* You can add global styles to this file, and also import other style files */
+/* 1. Importar fuente Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 2. Configuración Base */
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+    @apply antialiased text-slate-800 bg-slate-50;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight text-slate-900;
+  }
+}
+
+/* 3. Componentes Reutilizables */
+@layer components {
+  /* Botones */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg 
+           hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 
+           transition-all font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Inputs de formulario */
+  .input-field {
+    @apply w-full px-4 py-2 border border-slate-300 rounded-lg 
+           focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 
+           outline-none transition-all text-sm bg-white;
+  }
+
+  /* Tarjetas (Cards) */
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden;
+  }
+}
+
+/* 4. Clases Globales para RouterLinkActive 
+   Usamos @apply para mantener consistencia con los colores del tema.
+*/
+
+.active-link {
+  /* Estado base (Light Mode) */
+  @apply bg-indigo-50 border-l-indigo-600 text-indigo-700 font-semibold !important;
+  /* Nota: border-left-color ya está implícito en border-l-indigo-600 si el elemento tiene border-l-[3px] */
+}
+
+.active-link i {
+  @apply text-indigo-600 !important;
+}
+
+/* Estado Dark Mode 
+   Detecta si el sidebar tiene fondo oscuro (bg-slate-900) 
+   y cambia los estilos del link activo automáticamente.
+*/
+.bg-slate-900 .active-link {
+  @apply bg-white/10 border-l-indigo-400 text-white !important;
+}
+
+.bg-slate-900 .active-link i {
+  @apply text-white !important;
+}
