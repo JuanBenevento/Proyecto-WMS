@@ -101,6 +101,6 @@ public class PickingService implements AllocateStockUseCase {
 
     private String getCurrentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null ? auth.getName() : "SYSTEM";
+        return auth != null ? auth.getName() : WmsConstants.SYSTEM_USER;
     }
 }

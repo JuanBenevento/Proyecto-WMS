@@ -148,6 +148,6 @@ public class AuditEventListener {
         if (authentication != null && authentication.isAuthenticated()) {
             return authentication.getName();
         }
-        return "SYSTEM";
+        return WmsConstants.SYSTEM_USER;
     }
 }

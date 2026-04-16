@@ -1,5 +1,6 @@
 package com.juanbenevento.wms.shared.infrastructure.tenant;
 
+import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +21,7 @@ public class TenantFilterAspect {
     public void enableTenantFilter() {
         String currentTenant = TenantContext.getTenantId();
 
-        if (currentTenant != null && !currentTenant.equals("SYSTEM")) {
+        if (currentTenant != null && !currentTenant.equals(WmsConstants.SYSTEM_TENANT)) {
 
             Session session = entityManager.unwrap(Session.class);
 

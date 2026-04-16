@@ -3,6 +3,7 @@ package com.juanbenevento.wms.shared.infrastructure.config;
 import com.juanbenevento.wms.identity.domain.model.Role;
 import com.juanbenevento.wms.identity.infrastructure.out.persistence.SpringDataUserRepository;
 import com.juanbenevento.wms.identity.infrastructure.out.persistence.UserEntity;
+import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import com.juanbenevento.wms.shared.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,7 @@ public class DataInitializer {
     public void initData() {
         log.info("🚀 Inicializando datos maestros del sistema...");
 
-        TenantContext.setTenantId("SYSTEM");
+        TenantContext.setTenantId(WmsConstants.SYSTEM_TENANT);
 
         try {
             if (springDataUserRepository.count() == 0) {
