@@ -1,5 +1,6 @@
 package com.juanbenevento.wms.shared.infrastructure.adapter.out.persistence;
 
+import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import com.juanbenevento.wms.shared.infrastructure.tenant.TenantContext;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreRemove;
@@ -10,8 +11,6 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class TenantEntityListener {
-
-    private static final String SUPER_ADMIN_TENANT = "SYSTEM";
 
     @PrePersist
     @PreUpdate
@@ -26,9 +25,9 @@ public class TenantEntityListener {
                 throw new IllegalStateException("Operación no permitida: Falta contexto de Tenant.");
             }
 
-            if (SUPER_ADMIN_TENANT.equals(currentContextTenant)) {
+            if (WmsConstants.SYSTEM_TENANT.equals(currentContextTenant)) {
                 if (auditableEntity.getTenantId() == null) {
-                    auditableEntity.setTenantId(SUPER_ADMIN_TENANT);
+                    auditableEntity.setTenantId(WmsConstants.SYSTEM_TENANT);
                 }
             } else {
                 auditableEntity.setTenantId(currentContextTenant);

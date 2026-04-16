@@ -32,4 +32,14 @@ public final class WmsConstants {
      * Sentinel value for LPN when multiple items are involved in a stock movement.
      */
     public static final String LPN_VARIOUS = "VARIOUS";
+
+    /**
+     * System tenant identifier used for background jobs and system operations.
+     */
+    public static final String SYSTEM_TENANT = "SYSTEM";
+
+    /**
+     * System user identifier used when no authenticated user is present.
+     */
+    public static final String SYSTEM_USER = "SYSTEM";
 }

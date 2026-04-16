@@ -14,6 +14,7 @@ import com.juanbenevento.wms.warehouse.domain.exception.LocationNotFoundExceptio
 import com.juanbenevento.wms.inventory.domain.model.InventoryItem;
 import com.juanbenevento.wms.inventory.domain.model.InventoryStatus;
 import com.juanbenevento.wms.warehouse.domain.model.Location;
+import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -135,6 +136,6 @@ public class InternalOperationsService implements PutAwayUseCase, ManageInventor
 
     private String getCurrentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null ? auth.getName() : "SYSTEM";
+        return auth != null ? auth.getName() : WmsConstants.SYSTEM_USER;
     }
 }
