@@ -32,6 +32,13 @@ public class InventoryPersistenceAdapter implements InventoryRepositoryPort {
     }
 
     @Override
+    public InventoryItem findByInventoryItemId(String inventoryItemId) {
+        return jpaRepository.findById(inventoryItemId)
+                .map(mapper::toItemDomain)
+                .orElse(null);
+    }
+
+    @Override
     public List<InventoryItem> findByProduct(String sku) {
         return jpaRepository.findByProductSku(sku)
                 .stream()
