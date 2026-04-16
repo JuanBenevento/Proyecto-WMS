@@ -1,7 +1,7 @@
 package com.juanbenevento.wms.inventory.application.service;
 
 import com.juanbenevento.wms.inventory.application.port.out.InventoryRepositoryPort;
-import com.juanbenevento.wms.inventory.application.port.out.OrderQueryPort;
+import com.juanbenevento.wms.orders.application.port.out.OrderQueryPort;
 import com.juanbenevento.wms.inventory.domain.event.StockAssignedEvent;
 import com.juanbenevento.wms.inventory.domain.event.StockShortageEvent;
 import com.juanbenevento.wms.inventory.domain.model.InventoryItem;
@@ -196,14 +196,14 @@ public class OrderAssignmentService {
                 reservedPart.setStatus(InventoryStatus.RESERVED);
                 inventoryRepository.save(reservedPart);
                 
-                inventoryItemId = reservedPart.getInventoryItemId();
+                inventoryItemId = reservedPart.getLpn().getValue();
                 locationCode = item.getLocationCode();
             } else {
                 // Tomar todo el item
                 item.setStatus(InventoryStatus.RESERVED);
                 inventoryRepository.save(item);
                 
-                inventoryItemId = item.getInventoryItemId();
+                inventoryItemId = item.getLpn().getValue();
                 locationCode = item.getLocationCode();
             }
             
@@ -238,7 +238,7 @@ public class OrderAssignmentService {
             item.setStatus(InventoryStatus.RESERVED);
             inventoryRepository.save(item);
             
-            inventoryItemId = item.getInventoryItemId();
+            inventoryItemId = item.getLpn().getValue();
             locationCode = item.getLocationCode();
             remaining = remaining.subtract(toTake);
             
@@ -248,12 +248,12 @@ public class OrderAssignmentService {
         return AllocationResult.success(totalAvailable, inventoryItemId, locationCode);
     }
 
-    private String generateLpn() {
+    private Lpn generateLpn() {
         String uuid = UUID.randomUUID().toString()
             .replace("-", "")
             .substring(0, 8)
             .toUpperCase();
-        return WmsConstants.PICK_PREFIX + uuid;
+        return Lpn.fromRaw(WmsConstants.PICK_PREFIX + uuid);
     }
 
     private String getCurrentUser() {

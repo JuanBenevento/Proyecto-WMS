@@ -9,8 +9,8 @@ import com.juanbenevento.wms.inventory.application.port.in.usecases.AllocateStoc
 import com.juanbenevento.wms.inventory.application.port.out.InventoryRepositoryPort;
 import com.juanbenevento.wms.inventory.application.port.out.PickingOrderPort;
 import com.juanbenevento.wms.inventory.application.port.out.PickingOrderPort.OrderLineForPicking;
-import com.juanbenevento.wms.inventory.domain.event.StockPickingCompletedEvent;
-import com.juanbenevento.wms.inventory.domain.event.StockPickingStartedEvent;
+import com.juanbenevento.wms.inventory.domain.event.PickingCompletedEvent;
+import com.juanbenevento.wms.inventory.domain.event.PickingStartedEvent;
 import com.juanbenevento.wms.inventory.domain.model.InventoryItem;
 import com.juanbenevento.wms.inventory.domain.model.InventoryStatus;
 import com.juanbenevento.wms.inventory.domain.model.PickingSession;
@@ -109,7 +109,7 @@ public class PickingService implements AllocateStockUseCase {
         }
 
         // Publicar evento
-        eventPublisher.publishEvent(new com.juanbenevento.wms.inventory.domain.event.PickingStartedEvent(
+        eventPublisher.publishEvent(new PickingStartedEvent(
                 command.orderId(),
                 orderInfo.orderNumber(),
                 orderLines.stream().map(OrderLineForPicking::lineId).toList(),
@@ -220,7 +220,7 @@ public class PickingService implements AllocateStockUseCase {
                 ))
                 .toList();
 
-        eventPublisher.publishEvent(new com.juanbenevento.wms.inventory.domain.event.PickingCompletedEvent(
+        eventPublisher.publishEvent(new PickingCompletedEvent(
                 command.orderId(),
                 session.getOrderNumber(),
                 pickedLines,

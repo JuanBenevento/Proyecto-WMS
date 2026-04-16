@@ -145,7 +145,8 @@ public class InMemoryEventBus implements EventBus {
     private void processPendingEvents() {
         PendingEventWrapper wrapper;
         while ((wrapper = pendingEvents.poll()) != null) {
-            executor.submit(() -> processEvent(wrapper));
+            final PendingEventWrapper eventWrapper = wrapper;
+            executor.submit(() -> processEvent(eventWrapper));
         }
     }
     
