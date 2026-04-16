@@ -1,12 +1,21 @@
 package com.juanbenevento.wms.orders.application.mapper;
 
+import com.juanbenevento.wms.orders.application.port.in.command.AddOrderLineCommand;
+import com.juanbenevento.wms.orders.application.port.in.command.CreateOrderCommand;
+import com.juanbenevento.wms.orders.application.port.in.command.CreateOrderLineCommand;
+import com.juanbenevento.wms.orders.application.port.in.dto.OrderLineResponse;
+import com.juanbenevento.wms.orders.application.port.in.dto.OrderResponse;
 import com.juanbenevento.wms.orders.domain.model.Order;
 import com.juanbenevento.wms.orders.domain.model.OrderLine;
+import com.juanbenevento.wms.orders.domain.model.OrderLineStatus;
+import com.juanbenevento.wms.orders.domain.model.OrderStatus;
+import com.juanbenevento.wms.orders.domain.model.StatusReason;
 import com.juanbenevento.wms.orders.infrastructure.out.persistence.OrderEntity;
 import com.juanbenevento.wms.orders.infrastructure.out.persistence.OrderLineEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -152,5 +161,143 @@ public class OrderMapper {
                 entity.getNotes(),
                 entity.getVersion()
         );
+    }
+
+    // ==================== COMMAND MAPPING ====================
+
+    /**
+     * Convierte CreateOrderCommand -> Domain Order (nuevo pedido).
+     */
+    public Order toOrderDomain(CreateOrderCommand command) {
+        if (command == null) return null;
+
+        Order order = Order.create(
+                command.customerId(),
+                command.customerName(),
+                command.customerEmail(),
+                command.shippingAddress(),
+                command.priority(),
+                command.promisedShipDate(),
+                command.promisedDeliveryDate(),
+                command.warehouseId(),
+                command.notes()
+        );
+
+        // Agregar líneas
+        if (command.lines() != null) {
+            for (CreateOrderLineCommand lineCmd : command.lines()) {
+                OrderLine line = OrderLine.create(
+                        UUID.randomUUID().toString(),
+                        lineCmd.productSku(),
+                        lineCmd.requestedQuantity(),
+                        lineCmd.promisedDeliveryDate(),
+                        lineCmd.notes()
+                );
+                order.addLine(line);
+            }
+        }
+
+        return order;
+    }
+
+    /**
+     * Convierte AddOrderLineCommand -> Domain OrderLine.
+     */
+    public OrderLine toOrderLineDomain(AddOrderLineCommand command) {
+        if (command == null) return null;
+
+        return OrderLine.create(
+                UUID.randomUUID().toString(),
+                command.productSku(),
+                command.requestedQuantity(),
+                command.promisedDeliveryDate(),
+                command.notes()
+        );
+    }
+
+    // ==================== RESPONSE MAPPING ====================
+
+    /**
+     * Convierte Domain Order -> OrderResponse (para API).
+     */
+    public OrderResponse toOrderResponse(Order order) {
+        if (order == null) return null;
+
+        List<OrderLineResponse> lineResponses = null;
+        if (order.getLines() != null && !order.getLines().isEmpty()) {
+            lineResponses = order.getLines().stream()
+                    .map(this::toOrderLineResponse)
+                    .collect(Collectors.toList());
+        }
+
+        StatusReason reason = order.getStatusReason();
+
+        return new OrderResponse(
+                order.getOrderId(),
+                order.getOrderNumber(),
+                order.getCustomerId(),
+                order.getCustomerName(),
+                order.getCustomerEmail(),
+                order.getShippingAddress(),
+                order.getPriority(),
+                order.getStatus().name(),
+                order.getStatus().getDescription(),
+                reason.name(),
+                reason.getDescription(),
+                order.getPromisedShipDate(),
+                order.getPromisedDeliveryDate(),
+                order.getWarehouseId(),
+                order.getCarrierId(),
+                order.getTrackingNumber(),
+                order.getNotes(),
+                order.getCreatedAt(),
+                order.getUpdatedAt(),
+                order.getCancelledBy(),
+                order.getCancellationReason(),
+                order.getLineCount(),
+                order.getTotalRequestedQuantity(),
+                order.getTotalAllocatedQuantity(),
+                order.getTotalPickedQuantity(),
+                lineResponses
+        );
+    }
+
+    /**
+     * Convierte Domain OrderLine -> OrderLineResponse (para API).
+     */
+    public OrderLineResponse toOrderLineResponse(OrderLine line) {
+        if (line == null) return null;
+
+        return new OrderLineResponse(
+                line.getLineId(),
+                line.getProductSku(),
+                null,  // productName - se puede enriquecer desde catalog si se necesita
+                line.getRequestedQuantity(),
+                line.getAllocatedQuantity(),
+                line.getPickedQuantity(),
+                line.getShippedQuantity(),
+                line.getDeliveredQuantity(),
+                line.getStatus().name(),
+                getOrderLineStatusDescription(line.getStatus()),
+                line.getInventoryItemId(),
+                line.getLocationCode(),
+                line.getPromisedDeliveryDate(),
+                line.getNotes(),
+                line.isFulfilled(),
+                line.hasShortage()
+        );
+    }
+
+    private String getOrderLineStatusDescription(OrderLineStatus status) {
+        return switch (status) {
+            case PENDING -> "Pendiente - Sin asignar stock";
+            case ALLOCATED -> "Asignado - Stock reservado";
+            case PICKED -> "Pickeado - Items colectados";
+            case SHORT_PICKED -> "Pick parcial - Faltante";
+            case PACKED -> "Empacado - Listo para envío";
+            case SHIPPED -> "Enviado";
+            case DELIVERED -> "Entregado";
+            case CANCELLED -> "Cancelado";
+        };
     }
 }

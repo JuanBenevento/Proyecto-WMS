@@ -1,6 +1,6 @@
 package com.juanbenevento.wms.orders.domain.model;
 
-import lombok.Getter;
+import com.juanbenevento.wms.orders.domain.event.DomainEvent;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,19 +13,26 @@ import java.util.UUID;
 
 /**
  * Order aggregate root - representa un pedido de un cliente.
- * Contiene las líneas del pedido y su estado general.
+ * 
+ * Usa el patrón Inventory Leads: Inventory detecta pedidos en estado PENDING
+ * y les asigna stock automáticamente. Este módulo recibe eventos de Inventory
+ * y actualiza su estado.
+ * 
+ * Sistema de estados:
+ * - El estado actual se representa con OrderStatusInfo (status + reason + metadata)
+ * - Las transiciones válidas están definidas en OrderStatus.canTransitionTo()
+ * - Los estados HOLD y CANCELLED tienen razones específicas (StatusReason)
  */
-@Getter
 public class Order {
 
     private final String orderId;
-    private final String orderNumber;      // Human-readable order number (e.g., "ORD-2024-00001")
+    private final String orderNumber;      // Human-readable (e.g., "ORD-2024-00001")
     private final String customerId;
     private final String customerName;
     private final String customerEmail;
     private final String shippingAddress;
     private final String priority;          // HIGH, MEDIUM, LOW
-    private OrderStatus status;
+    private OrderStatusInfo statusInfo;     // Estado actual con razón
     private final LocalDate promisedShipDate;
     private final LocalDate promisedDeliveryDate;
     private final String warehouseId;
@@ -43,7 +50,7 @@ public class Order {
 
     private Order(String orderId, String orderNumber, String customerId, String customerName,
                   String customerEmail, String shippingAddress, String priority,
-                  OrderStatus status, LocalDate promisedShipDate, LocalDate promisedDeliveryDate,
+                  OrderStatusInfo statusInfo, LocalDate promisedShipDate, LocalDate promisedDeliveryDate,
                   String warehouseId, String carrierId, String trackingNumber, String notes,
                   LocalDateTime createdAt, LocalDateTime updatedAt, String cancelledBy,
                   String cancellationReason, Long version, List<OrderLine> lines) {
@@ -54,7 +61,7 @@ public class Order {
         this.customerEmail = customerEmail;
         this.shippingAddress = shippingAddress;
         this.priority = priority;
-        this.status = status;
+        this.statusInfo = statusInfo;
         this.promisedShipDate = promisedShipDate;
         this.promisedDeliveryDate = promisedDeliveryDate;
         this.warehouseId = warehouseId;
@@ -72,7 +79,8 @@ public class Order {
     // --- FACTORY METHODS ---
 
     /**
-     * Creates a new Order from the customer-facing API.
+     * Crea una nueva orden en estado CREATED.
+     * La orden aún no está validada.
      */
     public static Order create(String customerId, String customerName, String customerEmail,
                                 String shippingAddress, String priority,
@@ -93,7 +101,7 @@ public class Order {
                 customerEmail,
                 shippingAddress,
                 priority != null ? priority : "MEDIUM",
-                OrderStatus.PENDING,
+                OrderStatusInfo.of(OrderStatus.CREATED),
                 promisedShipDate,
                 promisedDeliveryDate,
                 warehouseId,
@@ -110,7 +118,7 @@ public class Order {
     }
 
     /**
-     * Reconstructs Order from repository.
+     * Reconstruye una orden desde el repositorio.
      */
     public static Order fromRepository(String orderId, String orderNumber, String customerId,
                                         String customerName, String customerEmail,
@@ -120,8 +128,9 @@ public class Order {
                                         String notes, LocalDateTime createdAt, LocalDateTime updatedAt,
                                         String cancelledBy, String cancellationReason,
                                         Long version, List<OrderLine> lines) {
+        OrderStatusInfo statusInfo = OrderStatusInfo.of(status);
         return new Order(orderId, orderNumber, customerId, customerName, customerEmail,
-                shippingAddress, priority, status, promisedShipDate, promisedDeliveryDate,
+                shippingAddress, priority, statusInfo, promisedShipDate, promisedDeliveryDate,
                 warehouseId, carrierId, trackingNumber, notes, createdAt, updatedAt,
                 cancelledBy, cancellationReason, version,
                 lines != null ? new ArrayList<>(lines) : new ArrayList<>());
@@ -147,196 +156,258 @@ public class Order {
         return String.format("ORD-%d-%s", year, uuid);
     }
 
-    // --- ORDER LINES MANAGEMENT ---
+    // --- GETTERS (delegados al statusInfo) ---
+
+    public String getOrderId() { return orderId; }
+    public String getOrderNumber() { return orderNumber; }
+    public String getCustomerId() { return customerId; }
+    public String getCustomerName() { return customerName; }
+    public String getCustomerEmail() { return customerEmail; }
+    public String getShippingAddress() { return shippingAddress; }
+    public String getPriority() { return priority; }
+    public LocalDate getPromisedShipDate() { return promisedShipDate; }
+    public LocalDate getPromisedDeliveryDate() { return promisedDeliveryDate; }
+    public String getWarehouseId() { return warehouseId; }
+    public String getCarrierId() { return carrierId; }
+    public String getTrackingNumber() { return trackingNumber; }
+    public String getNotes() { return notes; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public String getCancelledBy() { return cancelledBy; }
+    public String getCancellationReason() { return cancellationReason; }
+    public Long getVersion() { return version; }
+    public List<OrderLine> getLines() { return Collections.unmodifiableList(lines); }
+    public int getLineCount() { return lines.size(); }
 
     /**
-     * Adds a line to this order.
+     * Obtiene el estado actual (delegado a statusInfo).
      */
+    public OrderStatus getStatus() {
+        return statusInfo != null ? statusInfo.getStatus() : null;
+    }
+
+    /**
+     * Obtiene la información completa del estado.
+     */
+    public OrderStatusInfo getStatusInfo() {
+        return statusInfo;
+    }
+
+    /**
+     * Obtiene la razón del estado actual.
+     */
+    public StatusReason getStatusReason() {
+        return statusInfo != null ? statusInfo.getReason() : StatusReason.NONE;
+    }
+
+    // --- ORDER LINES MANAGEMENT ---
+
     public void addLine(OrderLine line) {
         if (line == null) {
             throw new IllegalArgumentException("La línea no puede ser nula");
         }
-        if (status != OrderStatus.PENDING) {
-            throw new IllegalStateException("Solo se pueden agregar líneas a pedidos en estado PENDING");
+        if (!canAddLines()) {
+            throw new IllegalStateException("Solo se pueden agregar líneas en estado CREATED o PENDING");
         }
         this.lines.add(line);
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * Removes a line from this order.
-     */
     public void removeLine(String lineId) {
         if (lineId == null || lineId.isBlank()) {
             throw new IllegalArgumentException("El ID de línea es obligatorio");
         }
-        if (status != OrderStatus.PENDING) {
-            throw new IllegalStateException("Solo se pueden eliminar líneas de pedidos en estado PENDING");
+        if (!canAddLines()) {
+            throw new IllegalStateException("Solo se pueden eliminar líneas en estado CREATED o PENDING");
         }
         this.lines.removeIf(line -> line.getLineId().equals(lineId));
         this.updatedAt = LocalDateTime.now();
     }
 
+    private boolean canAddLines() {
+        OrderStatus status = getStatus();
+        return status == OrderStatus.CREATED || status == OrderStatus.PENDING;
+    }
+
+    // --- STATUS TRANSITIONS ---
+
     /**
-     * Returns an unmodifiable view of the lines.
+     * Confirma la orden (CREATED → CONFIRMED).
      */
-    public List<OrderLine> getLines() {
-        return Collections.unmodifiableList(lines);
+    public void confirm() {
+        transitionTo(OrderStatus.CONFIRMED, StatusReason.NONE, null);
     }
 
     /**
-     * Returns the number of lines in this order.
+     * Marca la orden como pendiente de asignación de stock (CONFIRMED/PENDING).
      */
-    public int getLineCount() {
-        return lines.size();
+    public void markAsPending() {
+        OrderStatus current = getStatus();
+        if (current == OrderStatus.CONFIRMED || current == OrderStatus.HOLD) {
+            transitionTo(OrderStatus.PENDING, StatusReason.NONE, null);
+        }
     }
 
-    // --- ORDER STATUS TRANSITIONS ---
-
     /**
-     * Allocates stock to all lines (prepares the order for picking).
+     * Asigna stock a una línea (llamado por InventoryService).
+     * No cambia el estado general de la orden.
      */
-    public void allocate() {
-        if (!status.canTransitionTo(OrderStatus.ALLOCATED)) {
-            throw new IllegalStateException("No se puede asignar stock cuando el estado es " + status);
-        }
-        if (lines.isEmpty()) {
-            throw new IllegalStateException("No se pueden asignar pedidos sin líneas");
-        }
-
-        this.status = OrderStatus.ALLOCATED;
+    public void assignStockToLine(String lineId, BigDecimal allocatedQuantity, 
+                                  String inventoryItemId, String locationCode) {
+        OrderLine line = findLine(lineId);
+        line.allocate(allocatedQuantity, inventoryItemId, locationCode);
         this.updatedAt = LocalDateTime.now();
+        
+        // Si todas las líneas tienen stock, transicionar a ALLOCATED
+        if (allLinesAllocated()) {
+            transitionTo(OrderStatus.ALLOCATED, StatusReason.NONE, null);
+        }
     }
 
     /**
-     * Starts the picking process.
+     * Reporta faltante de stock para una línea (llamado por InventoryService).
+     */
+    public void reportShortageForLine(String lineId, BigDecimal allocatedQuantity) {
+        OrderLine line = findLine(lineId);
+        line.allocate(allocatedQuantity, null, null); // Stock parcial
+        
+        // Si no todas las líneas están full, ir a HOLD
+        if (!allLinesFullyAllocated()) {
+            transitionTo(OrderStatus.HOLD, StatusReason.INVENTORY_SHORTAGE, null);
+        }
+    }
+
+    /**
+     * Inicia el proceso de picking (ALLOCATED → PICKING).
      */
     public void startPicking() {
-        if (!status.canTransitionTo(OrderStatus.PICKING)) {
-            throw new IllegalStateException("No se puede iniciar picking cuando el estado es " + status);
-        }
-        if (lines.isEmpty()) {
-            throw new IllegalStateException("No se pueden pickear pedidos sin líneas");
-        }
-
-        this.status = OrderStatus.PICKING;
-        this.updatedAt = LocalDateTime.now();
+        transitionTo(OrderStatus.PICKING, StatusReason.NONE, null);
     }
 
     /**
-     * Packs the order (all lines packed).
+     * Completa el picking y empaca la orden (PICKING → PACKED).
      */
     public void pack() {
-        if (!status.canTransitionTo(OrderStatus.PACKED)) {
-            throw new IllegalStateException("No se puede empacar cuando el estado es " + status);
-        }
-        if (lines.isEmpty()) {
-            throw new IllegalStateException("No se pueden empacar pedidos sin líneas");
-        }
-
-        // Verificar que todas las líneas estén en estado PACKED o anterior (si short picked)
+        // Verificar que todas las líneas estén en estado válido
         for (OrderLine line : lines) {
-            if (line.getStatus() != OrderLineStatus.PACKED &&
-                line.getStatus() != OrderLineStatus.SHORT_PICKED) {
-                throw new IllegalStateException("No se puede empacar la orden: línea " + line.getLineId() +
+            if (line.getStatus() != com.juanbenevento.wms.orders.domain.model.OrderLineStatus.PICKED &&
+                line.getStatus() != com.juanbenevento.wms.orders.domain.model.OrderLineStatus.SHORT_PICKED) {
+                throw new IllegalStateException("No se puede empacar: línea " + line.getLineId() +
                         " está en estado " + line.getStatus());
             }
         }
-
-        this.status = OrderStatus.PACKED;
-        this.updatedAt = LocalDateTime.now();
+        transitionTo(OrderStatus.PACKED, StatusReason.NONE, null);
     }
 
     /**
-     * Ships the order with carrier and tracking info.
+     * Envía la orden (PACKED → SHIPPED).
      */
     public void ship(String carrierId, String trackingNumber) {
-        if (!status.canTransitionTo(OrderStatus.SHIPPED)) {
-            throw new IllegalStateException("No se puede enviar cuando el estado es " + status);
-        }
         if (carrierId == null || carrierId.isBlank()) {
             throw new IllegalArgumentException("El ID del transportista es obligatorio");
         }
-
         this.carrierId = carrierId;
         this.trackingNumber = trackingNumber;
-        this.status = OrderStatus.SHIPPED;
-        this.updatedAt = LocalDateTime.now();
+        transitionTo(OrderStatus.SHIPPED, StatusReason.NONE, null);
     }
 
     /**
-     * Marks the order as delivered.
+     * Marca como entregado (SHIPPED → DELIVERED).
      */
     public void deliver() {
-        if (!status.canTransitionTo(OrderStatus.DELIVERED)) {
-            throw new IllegalStateException("No se puede marcar como entregado cuando el estado es " + status);
-        }
-
-        this.status = OrderStatus.DELIVERED;
-        this.updatedAt = LocalDateTime.now();
+        transitionTo(OrderStatus.DELIVERED, StatusReason.NONE, null);
     }
 
     /**
-     * Cancels the order.
+     * Cancela la orden.
      */
-    public void cancel(String cancelledBy, String reason) {
-        if (!status.canTransitionTo(OrderStatus.CANCELLED)) {
-            throw new IllegalStateException("No se puede cancelar cuando el estado es " + status);
+    public void cancel(StatusReason reason, String cancelledBy, String cancellationReason) {
+        if (reason == null || !reason.isCancelledReason()) {
+            reason = StatusReason.CUSTOMER_CANCELLED; // Default
         }
-
         this.cancelledBy = cancelledBy;
-        this.cancellationReason = reason;
-        this.status = OrderStatus.CANCELLED;
-        this.updatedAt = LocalDateTime.now();
-
-        // Cancelar todas las líneas
+        this.cancellationReason = cancellationReason;
+        transitionTo(OrderStatus.CANCELLED, reason, null);
+        
+        // Cancelar todas las líneas reservadas
         for (OrderLine line : lines) {
             try {
                 line.cancel();
             } catch (IllegalStateException e) {
-                // Si no se puede cancelar una línea, continuar con las demás
+                // Si no se puede cancelar, continuar
             }
         }
     }
 
     /**
-     * Puts the order on hold.
+     * Poné la orden en espera con una razón específica.
      */
-    public void hold() {
-        if (!status.canTransitionTo(OrderStatus.HOLD)) {
-            throw new IllegalStateException("No se puede poner en espera cuando el estado es " + status);
+    public void hold(StatusReason reason) {
+        if (reason == null || !reason.isHoldReason()) {
+            throw new IllegalArgumentException("La razón debe ser una de HOLD: " + StatusReason.class.getEnumConstants());
         }
-
-        this.status = OrderStatus.HOLD;
-        this.updatedAt = LocalDateTime.now();
+        transitionTo(OrderStatus.HOLD, reason, null);
     }
 
     /**
-     * Releases the order from hold back to PENDING.
+     * Libera la orden de espera (HOLD → PENDING).
      */
     public void releaseFromHold() {
-        if (status != OrderStatus.HOLD) {
+        if (getStatus() != OrderStatus.HOLD) {
             throw new IllegalStateException("Solo se pueden liberar pedidos en estado HOLD");
         }
+        transitionTo(OrderStatus.PENDING, StatusReason.NONE, null);
+    }
 
-        this.status = OrderStatus.PENDING;
+    /**
+     * Transición interna de estado.
+     */
+    private void transitionTo(OrderStatus newStatus, StatusReason reason, String changedBy) {
+        OrderStatus currentStatus = getStatus();
+        
+        if (!currentStatus.canTransitionTo(newStatus)) {
+            throw new IllegalStateException(
+                String.format("No se puede transicionar de %s a %s", currentStatus, newStatus));
+        }
+
+        this.statusInfo = OrderStatusInfo.of(newStatus, reason).withChangedBy(changedBy);
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // --- LINE HELPERS ---
+
+    private OrderLine findLine(String lineId) {
+        return lines.stream()
+                .filter(line -> line.getLineId().equals(lineId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró línea con ID: " + lineId));
+    }
+
+    private boolean allLinesAllocated() {
+        return !lines.isEmpty() && lines.stream()
+                .allMatch(line -> line.getStatus() != com.juanbenevento.wms.orders.domain.model.OrderLineStatus.PENDING);
+    }
+
+    private boolean allLinesFullyAllocated() {
+        return !lines.isEmpty() && lines.stream()
+                .allMatch(line -> {
+                    if (line.getStatus() == com.juanbenevento.wms.orders.domain.model.OrderLineStatus.PENDING) {
+                        return false;
+                    }
+                    return line.getAllocatedQuantity() != null && 
+                           line.getAllocatedQuantity().compareTo(line.getRequestedQuantity()) >= 0;
+                });
     }
 
     // --- CALCULATIONS ---
 
-    /**
-     * Returns the total quantity requested across all lines.
-     */
     public BigDecimal getTotalRequestedQuantity() {
         return lines.stream()
                 .map(OrderLine::getRequestedQuantity)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /**
-     * Returns the total quantity allocated across all lines.
-     */
     public BigDecimal getTotalAllocatedQuantity() {
         return lines.stream()
                 .map(OrderLine::getAllocatedQuantity)
@@ -344,9 +415,6 @@ public class Order {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /**
-     * Returns the total quantity picked across all lines.
-     */
     public BigDecimal getTotalPickedQuantity() {
         return lines.stream()
                 .map(OrderLine::getPickedQuantity)
@@ -354,29 +422,20 @@ public class Order {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /**
-     * Checks if all lines are fulfilled.
-     */
     public boolean isFullyFulfilled() {
         if (lines.isEmpty()) return false;
         return lines.stream().allMatch(OrderLine::isFulfilled);
     }
 
-    /**
-     * Checks if there's any shortage in the order.
-     */
     public boolean hasShortage() {
         return lines.stream().anyMatch(OrderLine::hasShortage);
     }
 
-    /**
-     * Returns the count of lines with shortages.
-     */
     public int getShortedLineCount() {
         return (int) lines.stream().filter(OrderLine::hasShortage).count();
     }
 
-    // --- EQUALS & HASHCODE (based on orderId only) ---
+    // --- EQUALS & HASHCODE ---
 
     @Override
     public boolean equals(Object o) {
