@@ -77,6 +77,10 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/audit/audit.routes').then(m => m.AUDIT_ROUTES) 
       },
       { 
+        path: 'orders', 
+        loadChildren: () => import('./modules/orders/orders.routes').then(m => m.ORDERS_ROUTES) 
+      },
+      { 
         path: 'users', 
         loadComponent: () => import('./modules/admin/ui/user-management/user-management.component').then(m => m.UserManagementComponent) 
       },
