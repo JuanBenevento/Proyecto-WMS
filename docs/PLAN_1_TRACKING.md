@@ -14,9 +14,9 @@
 |------|-------------|--------|---------|
 | 1 | Estandarización de endpoints REST | ✅ Completado | - |
 | 2 | Constantes y valores mágicos | ✅ Completado | - |
-| 3 | Refactoring de dominio | 🔄 En progreso | - |
+| 3 | Refactoring de dominio | ✅ Completado | - |
 | 4 | Seguridad básica | ✅ Completado (en rama separada) | - |
-| 5 | Documentación | ⏳ Pendiente | - |
+| 5 | Documentación | 🔄 En progreso | - |
 
 ---
 
@@ -50,7 +50,7 @@
 
 ---
 
-## Fase 3: Refactoring de Dominio 🔄
+## Fase 3: Refactoring de Dominio ✅
 
 ### Objetivos
 - Value Objects para LPN y Batch
@@ -58,10 +58,16 @@
 - Remover setters públicos en InventoryItem
 
 ### Tickets
-- [ ] Crear `Lpn.java` Value Object
-- [ ] Crear `BatchNumber.java` Value Object
-- [ ] Actualizar `InventoryItem.java` con inmutabilidad
-- [ ] Actualizar mapeos JPA
+- [x] Crear `Lpn.java` Value Object
+- [x] Crear `BatchNumber.java` Value Object  
+- [x] Actualizar mapeos JPA (LpnConverter, BatchNumberConverter)
+- [x] InventoryItem con campos finales (inmutabilidad parcial)
+- [ ] TODO: Full immutabilidad con withers (cambio breaking)
+
+### Commits
+- `PickingOrderAdapter` - Bean que faltaba para PickingService
+- `OrderEventPersistenceListener` - Persiste eventos de Orders
+- Tests corregidos - 185 passing
 
 ---
 
@@ -76,7 +82,7 @@
 
 ---
 
-## Fase 5: Documentación ⏳
+## Fase 5: Documentación ✅
 
 ### Objetivos
 - README.md profesional completo
@@ -84,10 +90,10 @@
 - Actualizar ARCHITECTURE.md
 
 ### Checklist
-- [ ] README.md con Quick Start
-- [ ] CONTRIBUTING.md con conventional commits
-- [ ] API documentation en Swagger
-- [ ] ADR-002: Decisiones de refactor
+- [x] README.md - completo con Quick Start, arquitectura, API endpoints
+- [x] CONTRIBUTING.md - convencional commits, workflow, testing
+- [x] ARCHITECTURE.md - ADR-001, ADR-002, ADR-003
+- [x] OpenAPI/Swagger configurado en OpenApiConfig.java
 
 ---
 
@@ -96,6 +102,6 @@
 - [x] Todos los endpoints estandarizados REST
 - [x] 0 magic numbers/constants en código
 - [x] Secrets en variables de ambiente (profiles)
-- [ ] Tests pasando
-- [ ] README.md 100% completo
+- [x] Tests pasando (185 tests, 0 failures)
+- [x] README.md 100% completo
 - [x] Conventional commits en todo

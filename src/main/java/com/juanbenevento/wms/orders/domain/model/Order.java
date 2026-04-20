@@ -81,6 +81,10 @@ public class Order {
     /**
      * Crea una nueva orden en estado CREATED.
      * La orden aún no está validada.
+     * 
+     * Para usar el patrón Inventory Leads, llamar:
+     * 1. order.confirm() → CONFIRMED
+     * 2. order.markAsPending() → PENDING (Inventory detectará y asignará stock)
      */
     public static Order create(String customerId, String customerName, String customerEmail,
                                 String shippingAddress, String priority,
