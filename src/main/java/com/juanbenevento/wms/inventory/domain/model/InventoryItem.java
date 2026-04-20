@@ -77,7 +77,7 @@ public class InventoryItem {
     }
 
     public void setQuantity(BigDecimal newQuantity) {
-        if (newQuantity == null || newQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+        if (newQuantity == null || newQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("La cantidad no puede ser negativa");
         }
         this.quantity = newQuantity;

@@ -1,9 +1,9 @@
 package com.juanbenevento.wms.orders.infrastructure.event.bridge;
 
 import com.juanbenevento.wms.inventory.domain.event.StockAssignedEvent;
-import com.juanbenevento.wms.inventory.domain.event.StockPickingCompletedEvent;
-import com.juanbenevento.wms.inventory.domain.event.StockPickingStartedEvent;
 import com.juanbenevento.wms.inventory.domain.event.StockShortageEvent;
+import com.juanbenevento.wms.inventory.domain.event.PickingStartedEvent;
+import com.juanbenevento.wms.inventory.domain.event.PickingCompletedEvent;
 import com.juanbenevento.wms.orders.application.service.InventoryEventHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -101,7 +101,7 @@ public class InventoryEventBridge {
      */
     @EventListener
     @Async
-    public void onPickingStarted(StockPickingStartedEvent event) {
+    public void onPickingStarted(PickingStartedEvent event) {
         log.info("Bridge: Recibido PickingStartedEvent para orden {}", event.orderId());
         
         try {
@@ -110,8 +110,8 @@ public class InventoryEventBridge {
                     event.orderId(),
                     event.orderNumber(),
                     java.time.Instant.now(),
-                    event.startedBy(),
-                    event.assignedLocations()
+                    event.initiatedBy(),
+                    event.locationCodes()
                 );
             
             inventoryEventHandler.onPickingStarted(translated);
@@ -127,7 +127,7 @@ public class InventoryEventBridge {
      */
     @EventListener
     @Async
-    public void onPickingCompleted(StockPickingCompletedEvent event) {
+    public void onPickingCompleted(PickingCompletedEvent event) {
         log.info("Bridge: Recibido PickingCompletedEvent para orden {}", event.orderId());
         
         try {

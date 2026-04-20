@@ -1,6 +1,27 @@
 # Warehouse Management System (WMS)
 
-Sistema de Gestión de Almacenes construido con arquitectura hexagonal y principios DDD.
+## 📌 Descripción General
+
+Este proyecto es un **Warehouse Management System (WMS)** desarrollado con arquitectura hexagonal y principios DDD.
+
+El sistema modela operaciones centrales de un almacén:
+
+* Gestión de productos
+* Control de inventario
+* Ubicaciones físicas con restricciones de capacidad
+* Movimientos de stock (recepción, reserva, picking, despacho)
+* **Gestión de órdenes (Order Management)**
+* Auditoría mediante eventos de dominio
+
+El foco principal del proyecto está puesto en:
+
+* **Arquitectura limpia (Hexagonal / Clean Architecture)**
+* **Event-Driven Architecture** con Event Bus y retry/DLQ
+* **Reglas de negocio explícitas**
+* **Separación de responsabilidades**
+* **Escalabilidad y mantenibilidad**
+
+---
 
 ## 🚀 Quick Start
 
@@ -28,9 +49,6 @@ La API estará disponible en: `http://localhost:8080`
 ```bash
 # Ejecutar todos los tests
 ./mvnw test
-
-# Tests específicos
-./mvnw test -Dtest=InventoryServiceTest
 ```
 
 ---
@@ -43,12 +61,13 @@ src/
 │   ├── catalog/           # Dominio de Catálogo de Productos
 │   ├── identity/          # Gestión de Usuarios y Tenants
 │   ├── inventory/         # Core de Inventario
+│   ├── orders/            # Gestión de Órdenes
+│   ├── warehouse/         # Gestión de Ubicaciones
 │   ├── shared/            # Código compartido (Value Objects, excepciones)
-│   └── warehouse/         # Gestión de Ubicaciones
 │   │
 │   ├── domain/           # Entidades, Value Objects, Eventos
 │   ├── application/      # Casos de uso, Servicios, Commands, DTOs
-│   └── infrastructure/   # Adapters (REST, JPA, etc.)
+│   └── infrastructure/    # Adapters (REST, JPA, etc.)
 └── test/                  # Tests unitarios e integrados
 ```
 
@@ -56,59 +75,141 @@ src/
 
 ## 🏗️ Arquitectura
 
-El proyecto sigue **Arquitectura Hexagonal** con **DDD**:
+El backend implementa **Arquitectura Hexagonal (Ports & Adapters)**, con una separación clara entre:
 
-- **Domain Layer**: Java puro, reglas de negocio
-- **Application Layer**: Casos de uso, servicios
-- **Infrastructure Layer**: Controladores REST, persistencia JPA
+```
+com.juanbenevento.wms
+├── domain            # Núcleo del negocio (entidades, reglas, eventos)
+├── application       # Casos de uso y puertos
+└── infrastructure    # Adaptadores (REST, persistencia, seguridad)
+```
 
-### Value Objects Principales
+### Arquitectura de Eventos (Orders ↔ Inventory)
 
-| Value Object | Descripción |
-|--------------|-------------|
-| `Lpn` | License Plate Number - identificador único de inventario |
-| `BatchNumber` | Número de lote para trazabilidad |
-| `Dimensions` | Dimensiones físicas (alto, ancho, profundo, peso) |
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         ORDER SERVICE                             │
+│  OrderService.createOrder()                                      │
+│       │                                                           │
+│       ├── OrderCreatedEvent                                      │
+│       └── EventBus (InMemory + Retry/DLQ)                        │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     INVENTORY SERVICE                             │
+│  OrderAssignmentService detecta pedidos PENDING                  │
+│       │                                                           │
+│       ├── StockAssignedEvent (Spring Events)                     │
+│       └── InventoryEventBridge                                    │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   ORDER EVENT HANDLER                             │
+│  onStockAssigned() → Order.allocate()                          │
+│  onStockShortage() → Order.hold()                              │
+│  onPickingStarted() → Order.startPicking()                      │
+│  onPickingCompleted() → Order.pack()                             │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### Entidades Core
+### Flujo de Picking con Short Pick Handling
 
-- `InventoryItem`: Instancia física de inventario (LPN + cantidad + ubicación)
-- `Location`: Ubicación física en el almacén
-- `Product`: Master de producto (SKU + dimensiones)
+```
+1. startPicking(orderId, decision)
+       │
+       ├── Crear PickingSession
+       └── PickingStartedEvent → Order.status = PICKING
+
+2. pickLine(orderId, lineId, qty)
+       │
+       ├── Full Pick: qty == allocated
+       └── Short Pick: qty < allocated
+                    │
+                    └── Según decisión:
+                        - ALLOW_PARTIAL_SHIPMENT
+                        - BLOCK_UNTIL_COMPLETE
+                        - AUTO_REPLENISH
+                        - MANUAL_DECISION
+
+3. completePicking(orderId)
+       │
+       ├── PickingCompletedEvent
+       └── Order.status = PACKED
+```
+
+---
+
+## 🧩 Modelado de Dominio
+
+El dominio no es anémico. Algunas reglas implementadas:
+
+* Un producto **no puede modificar sus dimensiones** si existe stock físico
+* Una ubicación **no puede exceder su capacidad** (peso / volumen)
+* El inventario genera **eventos de dominio** ante cambios relevantes
+* **Order Management** con estados extensibles y razones configurables
+
+---
+
+## ⚙️ Stack Tecnológico
+
+### Backend
+* **Java 21**
+* **Spring Boot 3**
+* Spring Data JPA
+* Spring Security + JWT
+* PostgreSQL
+* SpringDoc OpenAPI (Swagger)
+
+### Frontend
+* **Angular 20**
+* Arquitectura modular por features
+
+---
+
+## 🧪 Testing
+
+* Tests unitarios enfocados en el **dominio y reglas de negocio**
+* Tests de servicio con mocks
+* Validaciones de invariantes críticas
 
 ---
 
 ## 🔌 API Endpoints
 
-### Inventario
+### Orders
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/v1/orders` | Crear orden |
+| GET | `/api/v1/orders/{id}` | Obtener orden |
+| GET | `/api/v1/orders` | Listar órdenes |
+| POST | `/api/v1/orders/{id}/confirm` | Confirmar |
+| POST | `/api/v1/orders/{id}/cancel` | Cancelar |
+| POST | `/api/v1/orders/{id}/hold` | Poner en espera |
+| POST | `/api/v1/orders/{id}/ship` | Enviar |
+
+### Inventory
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | POST | `/api/v1/inventory/receive` | Recibir mercancía |
 | POST | `/api/v1/inventory/put-away` | Ubicar en almacén |
-| POST | `/api/v1/inventory/move` | Mover entre ubicaciones |
-| POST | `/api/v1/inventory/adjust` | Ajustar inventario |
-| GET | `/api/v1/inventory/{lpn}` | Consultar por LPN |
 
 ### Picking
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/api/v1/picking/allocate` | Reservar stock para picking |
+| POST | `/api/v1/picking/start` | Iniciar picking |
+| POST | `/api/v1/picking/pick-line` | Registrar pick de línea |
+| POST | `/api/v1/picking/complete` | Completar picking |
 
 ---
 
-## 📖 Documentación Adicional
+## 👤 Autor
 
-- [Arquitectura](docs/ARCHITECTURE.md)
-- [Requisitos Funcionales](docs/FUNCTIONAL_REQS.md)
-
----
-
-## 🤝 Contribuir
-
-Ver [CONTRIBUTING.md](docs/CONTRIBUTING.md) para guidelines de commits y workflow.
+**Juan Manuel Benevento**
 
 ---
 
 ## 📄 Licencia
 
-MIT
+Este proyecto se publica con fines demostrativos y educativos.

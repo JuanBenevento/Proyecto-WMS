@@ -119,8 +119,9 @@ public class OrderLine {
         if (!status.canTransitionTo(OrderLineStatus.ALLOCATED)) {
             throw new IllegalStateException("No se puede asignar stock cuando el estado es " + status);
         }
-        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("La cantidad a asignar debe ser positiva");
+        // Allow zero for shortage scenarios (no stock available)
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("La cantidad a asignar no puede ser negativa");
         }
         if (quantity.compareTo(requestedQuantity) > 0) {
             throw new IllegalArgumentException("La cantidad asignada no puede exceder la solicitada");

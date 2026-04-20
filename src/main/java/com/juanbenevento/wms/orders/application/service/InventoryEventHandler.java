@@ -3,6 +3,7 @@ package com.juanbenevento.wms.orders.application.service;
 import com.juanbenevento.wms.orders.application.port.out.OrderRepositoryPort;
 import com.juanbenevento.wms.orders.domain.event.OrderStatusChangedEvent;
 import com.juanbenevento.wms.orders.domain.model.Order;
+import com.juanbenevento.wms.orders.domain.model.OrderStatus;
 import com.juanbenevento.wms.orders.domain.model.StatusReason;
 import com.juanbenevento.wms.orders.infrastructure.event.EventBus;
 import org.slf4j.Logger;
@@ -102,8 +103,10 @@ public class InventoryEventHandler {
                 order.reportShortageForLine(line.lineId(), line.allocatedQuantity());
             }
 
-            // Poner en espera
-            order.hold(StatusReason.INVENTORY_SHORTAGE);
+            // Poner en espera solo si no está ya en HOLD
+            if (order.getStatus() != OrderStatus.HOLD) {
+                order.hold(StatusReason.INVENTORY_SHORTAGE);
+            }
 
             // Persistir
             orderRepository.save(order);

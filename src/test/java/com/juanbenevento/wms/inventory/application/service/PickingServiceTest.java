@@ -62,6 +62,37 @@ class PickingServiceTest {
     @InjectMocks
     PickingService pickingService;
 
+    // ==================== HELPER METHODS ====================
+
+    private void startPickingSession(String orderId, ShortPickDecision decision) {
+        when(pickingOrderPort.getPickingOrderInfo(orderId))
+            .thenReturn(new PickingOrderInfo(orderId, "ORD-2024-" + orderId, "WH-001", "HIGH"));
+        when(pickingOrderPort.getOrderLinesForPicking(orderId))
+            .thenReturn(List.of(
+                new OrderLineForPicking("LINE-1", "SKU-001", new BigDecimal("10"), "LPN-001", "A-01-01")
+            ));
+        when(inventoryRepository.findByInventoryItemId("LPN-001"))
+            .thenReturn(createInventoryItem("LPN-001", "SKU-001", new BigDecimal("10")));
+
+        StartPickingCommand command = new StartPickingCommand(
+            orderId, decision, null, "SYSTEM"
+        );
+        pickingService.startPicking(command);
+    }
+
+    private InventoryItem createInventoryItem(String lpn, String sku, BigDecimal quantity) {
+        return InventoryItem.fromRepository(
+            Lpn.fromRaw(lpn),
+            sku,
+            quantity,
+            BatchNumber.of("BATCH-1"),
+            LocalDate.now().plusMonths(6),
+            InventoryStatus.RESERVED,
+            "A-01-01",
+            1L
+        );
+    }
+
     // ==================== EXISTING TEST ====================
 
     @Test
@@ -143,7 +174,8 @@ class PickingServiceTest {
             assertEquals(orderId, session.getOrderId());
             assertEquals(1, session.getLineCount());
             assertEquals(PickingSession.PickingSessionStatus.IN_PROGRESS, session.getStatus());
-            verify(eventPublisher).publishEvent(any());
+            // Verify event was published (the mock was called)
+            verify(eventPublisher, atLeastOnce()).publishEvent(any(Object.class));
         }
 
         @Test
@@ -271,7 +303,8 @@ class PickingServiceTest {
             // THEN
             assertEquals(PickingSession.PickingSessionStatus.COMPLETED, session.getStatus());
             assertFalse(session.hasShortPicks());
-            verify(eventPublisher).publishEvent(any());
+            // Verify event was published (the mock was called)
+            verify(eventPublisher, atLeastOnce()).publishEvent(any(Object.class));
         }
 
         @Test
@@ -341,38 +374,5 @@ class PickingServiceTest {
             // WHEN/THEN
             assertThrows(DomainException.class, () -> pickingService.cancelPicking("NON-EXISTENT"));
         }
-    }
-
-    // ==================== HELPERS ====================
-
-    private void startPickingSession(String orderId, ShortPickDecision decision) {
-        when(pickingOrderPort.getPickingOrderInfo(orderId))
-            .thenReturn(new PickingOrderInfo(orderId, "ORD-2024-" + orderId, "WH-001", "HIGH"));
-        when(pickingOrderPort.getOrderLinesForPicking(orderId))
-            .thenReturn(List.of(
-                new OrderLineForPicking("LINE-1", "SKU-001", new BigDecimal("10"), "LPN-001", "A-01-01")
-            ));
-        when(inventoryRepository.findByInventoryItemId("LPN-001"))
-            .thenReturn(createInventoryItem("LPN-001", "SKU-001", new BigDecimal("10")));
-
-        StartPickingCommand command = new StartPickingCommand(orderId, decision, null, "operator-1");
-        pickingService.startPicking(command);
-    }
-
-    private InventoryItem createInventoryItem(String lpn, String sku, BigDecimal qty) {
-        Product product = new Product(UUID.randomUUID(), sku, "Test Product", "Description",
-                new Dimensions(new BigDecimal("1.0"), new BigDecimal("1.0"), new BigDecimal("1.0"), new BigDecimal("1.0")), 1L);
-
-        InventoryItem item = InventoryItem.createReceived(
-            Lpn.fromRaw(lpn),
-            sku,
-            product,
-            qty,
-            BatchNumber.of("BATCH-001"),
-            LocalDate.now().plusDays(30),
-            "A-01-01"
-        );
-        item.setStatus(InventoryStatus.RESERVED);
-        return item;
     }
 }

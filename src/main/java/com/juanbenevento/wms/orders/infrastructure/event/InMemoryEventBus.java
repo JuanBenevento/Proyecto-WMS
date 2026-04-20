@@ -1,5 +1,6 @@
 package com.juanbenevento.wms.orders.infrastructure.event;
 
+import com.juanbenevento.wms.orders.application.port.out.DomainEventRepositoryPort;
 import com.juanbenevento.wms.orders.domain.event.DomainEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 
  * Características:
  * - Procesamiento asíncrono con executor pool
+ * - Persistencia de eventos ANTES de procesarlos (auditoría)
  * - Retry exponencial con backoff
  * - Dead Letter Queue para eventos fallidos
  * - Thread-safe
@@ -29,6 +31,9 @@ public class InMemoryEventBus implements EventBus {
     // Configuración de retry
     private static final int MAX_RETRIES = 5;
     private static final long INITIAL_BACKOFF_MS = 1000; // 1 segundo
+    
+    // Puerto para persistencia de eventos
+    private final DomainEventRepositoryPort eventRepository;
     
     // Handlers suscritos por tipo de evento
     private final Map<Class<? extends DomainEvent>, List<EventHandler<? extends DomainEvent>>> handlers = 
@@ -47,7 +52,9 @@ public class InMemoryEventBus implements EventBus {
     // Executor para procesamiento asíncrono
     private final ExecutorService executor;
     
-    public InMemoryEventBus() {
+    public InMemoryEventBus(DomainEventRepositoryPort eventRepository) {
+        this.eventRepository = eventRepository;
+        
         // Pool de threads para procesamiento de eventos
         this.executor = Executors.newFixedThreadPool(
             4, 
@@ -67,14 +74,24 @@ public class InMemoryEventBus implements EventBus {
             TimeUnit.MILLISECONDS
         );
         
-        log.info("InMemoryEventBus inicializado con pool de 4 processors");
+        log.info("InMemoryEventBus inicializado con pool de 4 processors y persistencia de eventos");
     }
     
     @Override
     public void publish(DomainEvent event) {
         log.debug("Publicando evento: {} [{}]", event.getEventType(), event.getEventId());
         
-        // Encontrar handlers para este tipo de evento
+        // 1. Persistir evento ANTES de procesarlo (auditoría WMS)
+        // Si la persistencia falla, logueamos error pero NO bloqueamos el procesamiento
+        try {
+            eventRepository.save(event);
+        } catch (Exception e) {
+            // ERROR de auditoría: important persistir esto para investigación
+            log.error("ERROR DE AUDITORIA: No se pudo persistir evento {}. Continuando procesamiento. Error: {}", 
+                event.getEventId(), e.getMessage(), e);
+        }
+        
+        // 2. Encontrar handlers para este tipo de evento
         List<EventHandler<? extends DomainEvent>> eventHandlers = findHandlers(event.getClass());
         
         if (eventHandlers.isEmpty()) {
@@ -82,7 +99,7 @@ public class InMemoryEventBus implements EventBus {
             return;
         }
         
-        // Encolar para procesamiento asíncrono
+        // 3. Encolar para procesamiento asíncrono
         for (EventHandler<? extends DomainEvent> handler : eventHandlers) {
             pendingEvents.add(new PendingEventWrapper(event, handler, 0, System.currentTimeMillis()));
         }
@@ -145,7 +162,8 @@ public class InMemoryEventBus implements EventBus {
     private void processPendingEvents() {
         PendingEventWrapper wrapper;
         while ((wrapper = pendingEvents.poll()) != null) {
-            executor.submit(() -> processEvent(wrapper));
+            final PendingEventWrapper eventWrapper = wrapper;
+            executor.submit(() -> processEvent(eventWrapper));
         }
     }
     

@@ -241,16 +241,16 @@ public class PickingSession {
             this.pickedAt = LocalDateTime.now();
         }
 
-        boolean isPicked() { return picked; }
-        boolean isShort() { return wasShort; }
-        String getLineId() { return lineId; }
-        String getSku() { return sku; }
-        BigDecimal getAllocatedQuantity() { return allocatedQuantity; }
-        BigDecimal getPickedQuantity() { return pickedQuantity; }
-        String getLocationCode() { return locationCode; }
-        String getInventoryItemId() { return inventoryItemId; }
-        boolean wasShort() { return wasShort; }
-        String getNotes() { return notes; }
-        LocalDateTime getPickedAt() { return pickedAt; }
+        public boolean isPicked() { return picked; }
+        public boolean isShort() { return wasShort; }
+        public String getLineId() { return lineId; }
+        public String getSku() { return sku; }
+        public BigDecimal getAllocatedQuantity() { return allocatedQuantity; }
+        public BigDecimal getPickedQuantity() { return pickedQuantity; }
+        public String getLocationCode() { return locationCode; }
+        public String getInventoryItemId() { return inventoryItemId; }
+        public boolean wasShort() { return wasShort; }
+        public String getNotes() { return notes; }
+        public LocalDateTime getPickedAt() { return pickedAt; }
     }
 }

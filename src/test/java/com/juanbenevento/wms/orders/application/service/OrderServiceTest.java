@@ -70,7 +70,8 @@ class OrderServiceTest {
             assertNotNull(response.orderId());
             assertNotNull(response.orderNumber());
             assertEquals("CUST-001", response.customerId());
-            assertEquals(OrderStatus.CONFIRMED.name(), response.status());
+            // Order ends in PENDING state after confirm() + markAsPending()
+            assertEquals(OrderStatus.PENDING.name(), response.status());
 
             // Verificar que se guardó
             verify(orderRepository).save(any(Order.class));
@@ -106,8 +107,8 @@ class OrderServiceTest {
             // WHEN
             OrderResponse response = orderService.createOrder(command);
 
-            // THEN
-            assertEquals(OrderStatus.CONFIRMED.name(), response.status());
+            // THEN - Order now ends in PENDING state (after confirm + markAsPending)
+            assertEquals(OrderStatus.PENDING.name(), response.status());
         }
     }
 
@@ -123,8 +124,9 @@ class OrderServiceTest {
             when(orderRepository.findById(order.getOrderId())).thenReturn(Optional.of(order));
             when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
+            // Use valid StatusReason enum value
             CancelOrderCommand command = new CancelOrderCommand(
-                order.getOrderId(), "user-123", "Cliente canceló"
+                order.getOrderId(), "user-123", "CUSTOMER_CANCELLED"
             );
 
             // WHEN
@@ -234,6 +236,8 @@ class OrderServiceTest {
         void shouldPackOrder() {
             // GIVEN
             Order order = createPickingOrder();
+            // Pick the lines first before packing
+            order.getLines().forEach(line -> line.pick(line.getRequestedQuantity()));
             when(orderRepository.findById(order.getOrderId())).thenReturn(Optional.of(order));
             when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -364,6 +368,7 @@ class OrderServiceTest {
     }
 
     private Order createPendingOrder() {
+        // Orders now start in CREATED state, need to transition to PENDING
         Order order = Order.create(
             "CUST-001", "Juan Pérez", "juan@test.com",
             "Calle Falsa 123", "MEDIUM",
@@ -374,6 +379,8 @@ class OrderServiceTest {
             UUID.randomUUID().toString(), "SKU-001",
             new BigDecimal("10"), null, null
         ));
+        
+        // Transition to PENDING (Inventory Leads pattern)
         order.confirm();
         order.markAsPending();
         
@@ -404,6 +411,7 @@ class OrderServiceTest {
 
     private Order createPackedOrder() {
         Order order = createPickingOrder();
+        // Need to pick the lines before packing
         var line = order.getLines().get(0);
         line.pick(line.getRequestedQuantity());
         order.pack();

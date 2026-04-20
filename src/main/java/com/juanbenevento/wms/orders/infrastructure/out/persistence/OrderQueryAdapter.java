@@ -1,5 +1,6 @@
 package com.juanbenevento.wms.orders.infrastructure.out.persistence;
 
+import com.juanbenevento.wms.orders.application.mapper.OrderMapper;
 import com.juanbenevento.wms.orders.application.port.out.OrderQueryPort;
 import com.juanbenevento.wms.orders.domain.model.Order;
 import com.juanbenevento.wms.orders.domain.model.OrderStatus;
@@ -19,31 +20,32 @@ import java.util.Optional;
 public class OrderQueryAdapter implements OrderQueryPort {
 
     private final SpringDataOrderRepository orderRepository;
+    private final OrderMapper orderMapper;
 
     @Override
     public List<String> findPendingOrderIds() {
         return orderRepository.findByStatus(OrderStatus.PENDING)
                 .stream()
-                .map(Order::getOrderId)
+                .map(entity -> entity.getOrderId())
                 .toList();
     }
 
     @Override
     public PendingOrderInfo getPendingOrderInfo(String orderId) {
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
+        Optional<OrderEntity> entityOpt = orderRepository.findById(orderId);
         
-        if (orderOpt.isEmpty()) {
+        if (entityOpt.isEmpty()) {
             return null;
         }
         
-        Order order = orderOpt.get();
+        OrderEntity entity = entityOpt.get();
         
         // Solo retornar si está en estado PENDING
-        if (order.getStatus() != OrderStatus.PENDING) {
+        if (entity.getStatus() != OrderStatus.PENDING) {
             return null;
         }
         
-        List<PendingOrderInfo.OrderLineInfo> lines = order.getLines().stream()
+        List<PendingOrderInfo.OrderLineInfo> lines = entity.getLines().stream()
                 .filter(line -> line.getStatus() == com.juanbenevento.wms.orders.domain.model.OrderLineStatus.PENDING)
                 .map(line -> new PendingOrderInfo.OrderLineInfo(
                         line.getLineId(),
@@ -53,9 +55,9 @@ public class OrderQueryAdapter implements OrderQueryPort {
                 .toList();
         
         return new PendingOrderInfo(
-                order.getOrderId(),
-                order.getOrderNumber(),
-                order.getPriority(),
+                entity.getOrderId(),
+                entity.getOrderNumber(),
+                entity.getPriority(),
                 lines
         );
     }
