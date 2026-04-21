@@ -54,11 +54,12 @@ public class OrderService {
     /**
      * Crea una nueva orden.
      * 
-     * Flujo:
-     * 1. Crea el dominio con las líneas
-     * 2. Confirma la orden (CREATED → CONFIRMED)
-     * 3. Persiste en DB
-     * 4. Publica OrderCreatedEvent (Inventory se entera)
+     * Flujo (Inventory Leads pattern):
+     * 1. Crea el dominio (CREATED)
+     * 2. Confirma (CREATED → CONFIRMED)
+     * 3. Marca como pendiente (CONFIRMED → PENDING)
+     * 4. Persiste en DB
+     * 5. Publica OrderCreatedEvent (Inventory se entera)
      */
     @Transactional
     public OrderResponse createOrder(CreateOrderCommand command) {
@@ -70,10 +71,13 @@ public class OrderService {
         // 2. Confirmar la orden (CREATED → CONFIRMED)
         order.confirm();
         
-        // 3. Persistir
+        // 3. Marcar como pendiente (CONFIRMED → PENDING) - para que Inventory detecte
+        order.markAsPending();
+        
+        // 4. Persistir
         Order savedOrder = orderRepository.save(order);
         
-        // 4. Publicar evento para Inventory
+        // 5. Publicar evento para Inventory
         eventBus.publish(new OrderCreatedEvent(savedOrder, null));
         
         log.info("Orden creada: {} [{}]", savedOrder.getOrderNumber(), savedOrder.getOrderId());

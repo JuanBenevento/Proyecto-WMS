@@ -1,4 +1,4 @@
-package com.juanbenevento.wms.orders.application.controller;
+package com.juanbenevento.wms.orders.infrastructure.in.rest;
 
 import com.juanbenevento.wms.orders.application.port.in.command.*;
 import com.juanbenevento.wms.orders.application.port.in.dto.*;

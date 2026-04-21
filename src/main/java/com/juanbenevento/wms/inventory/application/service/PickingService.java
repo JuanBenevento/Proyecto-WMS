@@ -406,7 +406,13 @@ public class PickingService implements AllocateStockUseCase {
     private void updateInventoryForPick(InventoryItem item, BigDecimal pickedQuantity) {
         BigDecimal remaining = item.getQuantity().subtract(pickedQuantity);
         
-        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+            // Should not happen but guard against it
+            log.warn("Negative remaining quantity for item {}, setting to zero", item.getLpn());
+            remaining = BigDecimal.ZERO;
+        }
+        
+        if (remaining.compareTo(BigDecimal.ZERO) == 0) {
             // Todo el stock fue pickeado
             item.setQuantity(BigDecimal.ZERO);
             item.setStatus(InventoryStatus.SHIPPED);

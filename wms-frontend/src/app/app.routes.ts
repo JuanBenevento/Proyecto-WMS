@@ -14,6 +14,9 @@ import { SaveLayoutUseCase } from './modules/warehouse/application/usecases/save
 import { LayoutRepository } from './modules/warehouse/domain/repositories/layout.repository';
 import { LayoutHttpRepository } from './modules/warehouse/infrastructure/repositories/layout-http.repository';
 import { GetRackSummaryUseCase } from './modules/warehouse/application/usecases/get-rack-summary.usecase';
+import { OrderRepository } from './modules/orders/domain/ports/repository/order.repository';
+import { OrderRepositoryAdapter } from './modules/orders/infrastructure/adapters/order-repository.adapter';
+import { ManageOrderUseCase } from './modules/orders/application/usecases/manage-order.usecase';
 
 
 const INVENTORY_PROVIDERS = [
@@ -31,6 +34,11 @@ const WAREHOUSE_PROVIDERS = [
   GetLayoutUseCase,
   SaveLayoutUseCase,
   GetRackSummaryUseCase
+];
+
+const ORDERS_PROVIDERS = [
+  { provide: OrderRepository, useClass: OrderRepositoryAdapter },
+  ManageOrderUseCase
 ];
 
 export const routes: Routes = [
@@ -54,7 +62,7 @@ export const routes: Routes = [
     loadComponent: () => import('./core/layout/layouts/admin-layout.component').then(m => m.AdminLayoutComponent),
     canActivate: [authGuard, roleGuard],
     data: { role: 'ADMIN' }, 
-    providers: [...INVENTORY_PROVIDERS, ...WAREHOUSE_PROVIDERS],
+    providers: [...INVENTORY_PROVIDERS, ...WAREHOUSE_PROVIDERS, ...ORDERS_PROVIDERS],
     children: [
       { 
         path: 'dashboard', 
@@ -75,6 +83,10 @@ export const routes: Routes = [
       { 
         path: 'audit', 
         loadChildren: () => import('./modules/audit/audit.routes').then(m => m.AUDIT_ROUTES) 
+      },
+      { 
+        path: 'orders', 
+        loadChildren: () => import('./modules/orders/orders.routes').then(m => m.ORDERS_ROUTES) 
       },
       { 
         path: 'users', 
