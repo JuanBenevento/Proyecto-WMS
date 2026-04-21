@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ReceiveInventoryUseCase } from '../../application/usecases/inbound/receive-inventory.usecase';
@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
   selector: 'app-inventory-receive',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './inventory-receive.component.html'
 })
 export class InventoryReceiveComponent {

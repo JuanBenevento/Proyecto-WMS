@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -10,7 +10,8 @@ import Swal from 'sweetalert2';
   selector: 'app-order-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
-  templateUrl: './order-form.component.html'
+  templateUrl: './order-form.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class OrderFormComponent implements OnInit {
   form!: FormGroup;

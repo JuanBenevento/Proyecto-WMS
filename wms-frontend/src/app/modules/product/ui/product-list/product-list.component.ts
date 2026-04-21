@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ManageProductUseCase } from '../../application/usecases/manage-product.usecase';
@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
   selector: 'app-product-list',
   standalone: true,
   imports: [CommonModule, RouterModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './product-list.component.html'
 })
 export class ProductListComponent implements OnInit {

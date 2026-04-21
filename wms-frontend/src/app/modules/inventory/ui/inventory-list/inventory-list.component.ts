@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { GetInventoryUseCase } from '../../application/usecases/query/get-inventory.usecase';
@@ -9,6 +9,7 @@ import { InventoryItemModel } from '../../domain/models/inventory-item.model';
   selector: 'app-inventory-list',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './inventory-list.component.html'
 })
 export class InventoryListComponent implements OnInit {
