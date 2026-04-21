@@ -1,4 +1,4 @@
-import { OrderPriority } from '../models/order.model';
+import { OrderPriority } from '../../models/order.model';
 
 /**
  * Command para crear una nueva orden.

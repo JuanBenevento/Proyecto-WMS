@@ -1,6 +1,9 @@
 import { Order, OrderLine, OrderFilters, OrderListResponse } from '../../domain/models/order.model';
 import { OrderResponseDto, OrderLineResponseDto, OrderPageResponseDto, CreateOrderRequestDto, CreateOrderLineRequestDto } from '../dtos/order.dto';
 
+// Alias para uso local
+type CreateOrderLineRequestDtoAlias = CreateOrderLineRequestDto;
+
 /**
  * Mapper para convertir entre DTOs del backend y modelos de dominio.
  */
@@ -109,7 +112,7 @@ export class CreateOrderMapper {
     promisedDeliveryDate?: string;
     warehouseId: string;
     notes?: string;
-    lines: CreateOrderLineRequestDto[];
+    lines: CreateOrderLineRequestDtoAlias[];
   }): CreateOrderRequestDto {
     return {
       customerId: command.customerId,
@@ -124,11 +127,4 @@ export class CreateOrderMapper {
       lines: command.lines
     };
   }
-}
-
-interface CreateOrderLineRequestDto {
-  productSku: string;
-  requestedQuantity: number;
-  promisedDeliveryDate?: string;
-  notes?: string;
 }
