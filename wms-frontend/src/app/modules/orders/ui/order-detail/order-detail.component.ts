@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ManageOrderUseCase } from '../../application/usecases/manage-order.usecase';
@@ -9,7 +9,8 @@ import Swal from 'sweetalert2';
   selector: 'app-order-detail',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  templateUrl: './order-detail.component.html'
+  templateUrl: './order-detail.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class OrderDetailComponent implements OnInit {
   order: Order | null = null;
