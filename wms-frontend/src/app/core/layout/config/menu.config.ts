@@ -50,6 +50,11 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'bi-shield-check', 
     route: '/admin/audit' 
   },
+  { 
+    label: 'Órdenes', 
+    icon: 'bi-clipboard2-check-fill', 
+    route: '/admin/orders' 
+  },
 
   // Maestros
   { 

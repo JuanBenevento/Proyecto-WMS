@@ -1,0 +1,207 @@
+<!-- Loading -->
+<div *ngIf="loading" class="min-h-screen flex items-center justify-center">
+  <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+</div>
+
+<!-- Detalle de Orden -->
+<div *ngIf="!loading && order" class="min-h-screen bg-gray-50/50 p-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div class="flex items-center gap-4">
+      <button routerLink="/orders" class="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Orden {{ order.orderNumber }}</h1>
+        <p class="text-sm text-gray-500">ID: {{ order.orderId }}</p>
+      </div>
+    </div>
+    
+    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border"
+          [ngClass]="getStatusClass(order.status)">
+      <span class="w-2 h-2 rounded-full bg-current"></span>
+      {{ order.statusDescription }}
+    </span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Información Principal -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Datos del Cliente -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Información del Cliente</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs text-gray-500">Nombre</label>
+            <p class="text-sm font-medium text-gray-900">{{ order.customerName }}</p>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">Email</label>
+            <p class="text-sm text-gray-900">{{ order.customerEmail }}</p>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">ID Cliente</label>
+            <p class="text-sm text-gray-900 font-mono">{{ order.customerId }}</p>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">Prioridad</label>
+            <p class="text-sm font-medium" [ngClass]="{
+              'text-red-600': order.priority === 'HIGH',
+              'text-yellow-600': order.priority === 'MEDIUM',
+              'text-green-600': order.priority === 'LOW'
+            }">{{ order.priority }}</p>
+          </div>
+        </div>
+        
+        <div class="mt-4">
+          <label class="text-xs text-gray-500">Dirección de Envío</label>
+          <p class="text-sm text-gray-900">{{ order.shippingAddress }}</p>
+        </div>
+      </div>
+
+      <!-- Líneas de la Orden -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+          Líneas ({{ order.lines.length }})
+        </h2>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                <th class="pb-3">SKU</th>
+                <th class="pb-3">Producto</th>
+                <th class="pb-3 text-right">Solicitado</th>
+                <th class="pb-3 text-right">Asignado</th>
+                <th class="pb-3 text-right">Pickeado</th>
+                <th class="pb-3">Estado</th>
+                <th class="pb-3">Ubicación</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr *ngFor="let line of order.lines" class="hover:bg-gray-50/50">
+                <td class="py-3 font-mono text-sm text-gray-600">{{ line.productSku }}</td>
+                <td class="py-3 text-sm text-gray-900">{{ line.productName || '-' }}</td>
+                <td class="py-3 text-sm text-gray-900 text-right font-medium">{{ line.requestedQuantity }}</td>
+                <td class="py-3 text-sm text-gray-600 text-right">{{ line.allocatedQuantity }}</td>
+                <td class="py-3 text-sm text-gray-600 text-right">{{ line.pickedQuantity }}</td>
+                <td class="py-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                        [ngClass]="{
+                          'bg-green-50 text-green-700': line.fulfilled,
+                          'bg-red-50 text-red-700': line.hasShortage,
+                          'bg-yellow-50 text-yellow-700': !line.fulfilled && !line.hasShortage
+                        }">
+                    {{ line.statusDescription }}
+                  </span>
+                </td>
+                <td class="py-3 text-sm text-gray-500 font-mono">{{ line.locationCode || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Notas -->
+      <div *ngIf="order.notes" class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Notas</h2>
+        <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ order.notes }}</p>
+      </div>
+    </div>
+
+    <!-- Sidebar: Resumen y Acciones -->
+    <div class="space-y-6">
+      <!-- Resumen -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Resumen</h2>
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-500">Líneas</span>
+            <span class="text-sm font-medium text-gray-900">{{ order.lineCount }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-500">Unidades Solicitadas</span>
+            <span class="text-sm font-medium text-gray-900">{{ order.totalRequestedQuantity }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-500">Unidades Asignadas</span>
+            <span class="text-sm font-medium text-gray-900">{{ order.totalAllocatedQuantity }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-500">Unidades Pickeadas</span>
+            <span class="text-sm font-medium text-gray-900">{{ order.totalPickedQuantity }}</span>
+          </div>
+          <hr class="border-gray-100">
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-500">Warehouse</span>
+            <span class="text-sm font-medium text-gray-900 font-mono">{{ order.warehouseId }}</span>
+          </div>
+          <div *ngIf="order.carrierId" class="flex justify-between">
+            <span class="text-sm text-gray-500">Carrier</span>
+            <span class="text-sm font-medium text-gray-900 font-mono">{{ order.carrierId }}</span>
+          </div>
+          <div *ngIf="order.trackingNumber" class="flex justify-between">
+            <span class="text-sm text-gray-500">Tracking</span>
+            <span class="text-sm font-medium text-gray-900 font-mono">{{ order.trackingNumber }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fechas -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Fechas</h2>
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-500">Creación</span>
+            <span class="text-sm text-gray-900">{{ formatDateTime(order.createdAt) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-500">Última Actualización</span>
+            <span class="text-sm text-gray-900">{{ formatDateTime(order.updatedAt) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-500">Fecha de Entrega Prometida</span>
+            <span class="text-sm text-gray-900">{{ formatDate(order.promisedDeliveryDate) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div *ngIf="getAvailableActions().length > 0" class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Acciones</h2>
+        <div class="space-y-2">
+          <button *ngFor="let action of getAvailableActions()"
+                  (click)="action.action()"
+                  [disabled]="actionLoading"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  [ngClass]="{
+                    'bg-indigo-600 hover:bg-indigo-700 text-white': action.variant === 'primary',
+                    'bg-green-600 hover:bg-green-700 text-white': action.variant === 'success',
+                    'bg-yellow-500 hover:bg-yellow-600 text-white': action.variant === 'warning',
+                    'bg-red-600 hover:bg-red-700 text-white': action.variant === 'danger'
+                  }">
+            <span *ngIf="actionLoading" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+            {{ actionLoading ? 'Procesando...' : action.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Información de Cancelación -->
+      <div *ngIf="order.status === 'CANCELLED'" class="bg-red-50 border border-red-200 rounded-xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-red-900 mb-4">Información de Cancelación</h2>
+        <div class="space-y-2">
+          <div>
+            <label class="text-xs text-red-600">Razón</label>
+            <p class="text-sm text-red-800">{{ order.cancellationReason || 'No especificada' }}</p>
+          </div>
+          <div>
+            <label class="text-xs text-red-600">Cancelada por</label>
+            <p class="text-sm text-red-800 font-mono">{{ order.cancelledBy || '-' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
