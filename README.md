@@ -77,13 +77,59 @@ WMS Enterprise es un sistema moderno y escalable para la gestión integral de al
 
 ### Prerequisites
 
+- **Docker** 20.10+ with Docker Compose
+- **8GB RAM** minimum (recommended 16GB)
+- **20GB disk space**
+
+### Option 1: Docker Compose (Recommended for Development)
+
+La forma más rápida de levantar todo el sistema:
+
+```bash
+# Clonar repositorio
+git clone https://github.com/JuanBenevento/Proyecto-WMS.git
+cd Proyecto-WMS
+
+# Levantar todos los servicios (PostgreSQL + Backend + Frontend)
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Ver estado de servicios
+docker-compose ps
+```
+
+**Tiempo de primer arranque:** ~3-5 minutos (depende de descarga de imágenes)
+
+**Una vez levantado:**
+
+| Servicio | URL | Credenciales |
+|----------|-----|--------------|
+| Frontend | http://localhost:4200 | superadmin / admin123 |
+| API | http://localhost:8080/api/v1 | - |
+| Swagger | http://localhost:8080/swagger-ui.html | - |
+| Health | http://localhost:8080/actuator/health | - |
+
+**Detener:**
+```bash
+docker-compose down                    # Detiene servicios
+docker-compose down -v               # Detiene Y elimina datos
+```
+
+---
+
+### Option 2: Manual Setup (Desarrollo Local)
+
+#### Prerequisites
+
 - **Java** 21 LTS
 - **Maven** 3.9+
 - **Node.js** 20+
-- **PostgreSQL** 16+ (production)
+- **PostgreSQL** 16+
 - **H2** (development/tests)
 
-### Installation
+#### Installation
 
 ```bash
 # Clone repository
@@ -281,29 +327,22 @@ npm test
 
 ## 🚢 Deployment
 
-### Docker Compose (Desarrollo)
+### Docker Compose (Desarrollo y Staging)
 
-```yaml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: wms_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-  
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/wms_db
-      JWT_SECRET_KEY: your-secret-key
-    depends_on:
-      - postgres
+El proyecto incluye `docker-compose.yml` listo para usar:
+
+```bash
+# Desarrollo completo (PostgreSQL + Backend + Frontend)
+docker-compose up -d
+
+# Con rebuild si hay cambios
+docker-compose up --build -d
+
+# Ver todos los logs
+docker-compose logs -f backend
+
+# Escalar backend (producción)
+docker-compose up -d --scale backend=3
 ```
 
 ### Kubernetes (Producción)
@@ -313,7 +352,21 @@ services:
 helm install wms ./charts/wms \
   --set database.host=postgres.prod.svc \
   --set jwt.secretKey=$JWT_SECRET_KEY
+
+# O usando docker-compose con orchestador externo
+docker-compose -f docker-compose.yml config > docker-stack.yml
+docker stack deploy -c docker-stack.yml wms
 ```
+
+### Environment Variables para Producción
+
+| Variable | Descripción | Requerido |
+|----------|-------------|-----------|
+| `SPRING_DATASOURCE_URL` | JDBC URL de PostgreSQL | ✅ |
+| `SPRING_DATASOURCE_PASSWORD` | Password de DB | ✅ |
+| `JWT_SECRET_KEY` | Clave JWT (min 256 bits) | ✅ |
+| `WMS_TENANT_ISOLATION_ENABLED` | Habilitar schema isolation | Opcional |
+| `WMS_TENANT_RLS_ENABLED` | Habilitar RLS policies | Opcional |
 
 ---
 
