@@ -244,3 +244,41 @@ classDiagram
   - `POST /adjust` - Ajustar inventario
   - `POST /allocate` - Reservar stock para picking
 * **Consecuencia:** API predecible y documentable
+
+---
+
+**ADR-004: Aislamiento de Datos por Tenant - Schema por Empresa**
+* **Contexto:** El sistema actual utiliza un patrón de "soft multi-tenancy" con columna `tenant_id` + Hibernate filter. Esto representa un riesgo de seguridad desde el punto de vista de auditoría profesional, porque:
+  - Si hay acceso directo a la base de datos (DBA, backup comprometido), los datos de TODAS las empresas son visibles
+  - No hay aislamiento a nivel de base de datos
+  - No cumple con requisitos de certificaciones SOC2 o ISO 27001
+* **Decisión:** Implementar schema por tenant (schema-based multi-tenancy) en PostgreSQL:
+  - Cada empresa (tenant) tendrá su propio `SCHEMA` dentro de la misma base de datos
+  - El usuario de aplicación tendrá permisos `USAGE` solo sobre el schema de su empresa
+  - Se complementará con PostgreSQL RLS (Row-Level Security) como capa adicional
+  - No se usa la opción de base de datos por tenant por su complejidad operacional
+* **Alternativas evaluadas:**
+  - *Opción A - Soft multi-tenancy (tenant_id)*: Estado actual. No pasa auditoría.
+  - *Opción B - Schema por tenant*: Elegida. Isolation a nivel DB + bajo costo operacional.
+  - *Opción C - Base de datos por tenant*: Excesivo costo operacional para >50 tenants.
+* **Estado de Implementación:** ✅ COMPLETADO (Fases 1-8)
+* **Fecha de Implementación:** Abril 2026
+* **Archivos Implementados:**
+  - `src/main/java/.../tenant/TenantSchemaManager.java` - Gestión de esquemas PostgreSQL
+  - `src/main/java/.../tenant/SearchPathConnectionInterceptor.java` - JDBC interceptor
+  - `src/main/java/.../tenant/TenantContext.java` - Extendido con getSchemaName()
+  - `src/main/java/.../tenant/TenantFilterAspect.java` - Refactorizado para schema validation
+  - `src/main/java/.../tenant/SchemaIsolationValidator.java` - Validador de aislamiento
+  - `src/main/resources/db/migration/V1__initial_tenant_structure.sql` - Infraestructura inicial
+  - `src/main/resources/db/migration/V__enable_rls_*.sql` - Políticas RLS (5 archivos)
+* **Notas de Implementación:**
+  - Schema naming convention: `tenant_{tenantId}` (lowercase, underscores)
+  - Connection pooling con search_path dinámico por sesión
+  - RLS habilitado como capa de defensa en profundidad
+  - Fase 6 (data migration) requiere ejecución manual en producción
+* **Consecuencias:**
+  - Requiere refactorización de capas de persistencia para obtener conexión dinámica por schema
+  - scripts de migración deben crear schema por tenant
+  - El TenantContext debe traducirse a schema de BD
+  - Backup y restore deben ser por schema o selectivos
+  - Cumple con requisitos de auditoría profesional

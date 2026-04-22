@@ -42,4 +42,24 @@ public final class WmsConstants {
      * System user identifier used when no authenticated user is present.
      */
     public static final String SYSTEM_USER = "SYSTEM";
+
+    /**
+     * Prefix for tenant schema names in PostgreSQL.
+     * Format: tenant_{tenantId} e.g., tenant_acme_corp
+     */
+    public static final String TENANT_SCHEMA_PREFIX = "tenant_";
+
+    /**
+     * Normalizes a tenant ID for use in schema names.
+     * Converts to lowercase and replaces spaces with underscores.
+     *
+     * @param tenantId the raw tenant identifier
+     * @return normalized tenant ID suitable for schema naming
+     */
+    public static String normalizeTenantId(String tenantId) {
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalArgumentException("Tenant ID cannot be null or blank");
+        }
+        return tenantId.trim().toLowerCase().replace(" ", "_").replace("-", "_");
+    }
 }
