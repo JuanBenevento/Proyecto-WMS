@@ -120,6 +120,27 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-aop</artifactId>
 		</dependency>
+		
+		<!-- ========================================================================
+			Performance: Caching
+			======================================================================== -->
+		<!-- Caffeine - In-memory cache (no Redis required for dev) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
+		<!-- Redis cache (optional - for production with distributed cache) -->
+		<!--
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+		-->
+		
 		<!-- Testcontainers for integration testing -->
 		<dependency>
 			<groupId>org.testcontainers</groupId>
