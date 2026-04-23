@@ -142,7 +142,7 @@ public class Lot {
      */
     public static Lot create(String lotNumber, String productSku, String batchNumber,
             LocalDate productionDate, String origin) {
-        return create(lotNumber, productSku, batchNumber, productionDate, origin, null, null, null, null, null, Map.of());
+        return create(lotNumber, productSku, batchNumber, productionDate, origin, null, null, null, null, Map.of());
     }
 
     /**
