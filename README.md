@@ -339,14 +339,6 @@ Este proyecto está bajo licencia MIT. Ver [LICENSE](LICENSE) para detalles.
 
 **Juan Manuel Benevento**
 - GitHub: [@JuanBenevento](https://github.com/JuanBenevento)
-- LinkedIn: [juanbenevento](https://linkedin.com/in/juanbenevento)
+- LinkedIn: [juanbenevento](https://www.linkedin.com/in/juan-manuel-benevento-1870b5216/)
 
 ---
-
-## ⭐️ Give a Star
-
-Si este proyecto te fue útil, ¡danos una ⭐ en GitHub!
-
----
-
-*WMS Enterprise - Built with ❤️ using Java 21 + Angular 20*
