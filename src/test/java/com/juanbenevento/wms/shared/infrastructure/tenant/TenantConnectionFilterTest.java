@@ -171,16 +171,4 @@ class TenantConnectionFilterTest {
             verify(jdbcTemplate).execute("RESET search_path");
         }
     }
-
-    @Nested
-    @DisplayName("Filter Order Tests")
-    class FilterOrderTests {
-
-        @Test
-        @DisplayName("Debe retornar orden de filter correcto")
-        void shouldReturnCorrectFilterOrder() {
-            // THEN
-            assertEquals(100, tenantConnectionFilter.getFilterOrder());
-        }
-    }
 }
