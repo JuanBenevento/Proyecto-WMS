@@ -3,7 +3,7 @@
  */
 
 import { DashboardKpiDto, ApiResponse } from '../dtos/dashboard.dto';
-import { DashboardKpis, OrderKpis, WarehouseKpis } from '../../models/kpi.model';
+import { DashboardKpis, OrderKpis, WarehouseKpis } from '../../domain/models/kpi.model';
 
 export function mapDashboardKpis(response: ApiResponse<DashboardKpiDto>): DashboardKpis {
   const data = response.data;

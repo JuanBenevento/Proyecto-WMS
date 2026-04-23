@@ -5,7 +5,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { DashboardRepository } from '../../domain/ports/dashboard.repository';
-import { DashboardKpis, OrderMetrics, WarehouseMetrics, Activity } from '../../models/kpi.model';
+import { DashboardKpis, OrderMetrics, WarehouseMetrics, Activity } from '../../domain/models/kpi.model';
 import { DashboardHttpAdapter } from './dashboard-http.adapter';
 import { mapDashboardKpis } from '../mappers/dashboard.mapper';
 
