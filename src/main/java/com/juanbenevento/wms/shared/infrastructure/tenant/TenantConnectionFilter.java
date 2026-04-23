@@ -73,20 +73,20 @@ public class TenantConnectionFilter extends OncePerRequestFilter {
         String schemaName = buildSchemaName(tenantId);
         
         try {
-            // Try to set search_path to tenant schema
-            // If schema doesn't exist, this will fail - we handle it gracefully
-            log.debug("Setting search_path to '{}' for tenant '{}'", schemaName, tenantId);
-            jdbcTemplate.execute("SET search_path TO " + schemaName);
+            // Set search_path to tenant schema FIRST, then public as fallback
+            // This way: queries find tables in tenant_xxx if they exist, otherwise in public
+            log.debug("Setting search_path to '{}, public' for tenant '{}'", schemaName, tenantId);
+            jdbcTemplate.execute("SET search_path TO " + schemaName + ", public");
             
             // Proceed with the request
             filterChain.doFilter(request, response);
             
         } catch (Exception e) {
-            // Schema doesn't exist or other DB error - explicitly use public schema
-            log.warn("Could not set tenant schema '{}' (may not exist): {}. Using public schema.", 
+            // Schema doesn't exist or other DB error - fallback to public only
+            log.warn("Could not set tenant schema '{}': {}. Using public schema only.", 
                     schemaName, e.getMessage());
             
-            // Explicitly set to public schema before proceeding
+            // Fallback: only public schema
             jdbcTemplate.execute("SET search_path TO public");
             
             // Continue with public schema - queries will work
@@ -94,7 +94,7 @@ public class TenantConnectionFilter extends OncePerRequestFilter {
             
         } finally {
             // Clean up search_path to prevent tenant leakage
-            // Explicitly set to public schema (not just RESET which uses default from postgresql.conf)
+            // Explicitly reset to public (not RESET which uses postgresql.conf default)
             log.trace("Resetting search_path to public after request");
             try {
                 jdbcTemplate.execute("SET search_path TO public");
