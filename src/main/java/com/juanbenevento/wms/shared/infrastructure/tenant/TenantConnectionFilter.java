@@ -82,18 +82,22 @@ public class TenantConnectionFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             
         } catch (Exception e) {
-            // Schema doesn't exist or other DB error - log and continue with public schema
-            log.warn("Could not set tenant schema '{}' (may not exist): {}. Using default schema.", 
+            // Schema doesn't exist or other DB error - explicitly use public schema
+            log.warn("Could not set tenant schema '{}' (may not exist): {}. Using public schema.", 
                     schemaName, e.getMessage());
-            // Continue without tenant isolation - queries will use default schema
+            
+            // Explicitly set to public schema before proceeding
+            jdbcTemplate.execute("SET search_path TO public");
+            
+            // Continue with public schema - queries will work
             filterChain.doFilter(request, response);
             
         } finally {
             // Clean up search_path to prevent tenant leakage
-            // This ensures connection is clean for next tenant
-            log.trace("Resetting search_path after request");
+            // Explicitly set to public schema (not just RESET which uses default from postgresql.conf)
+            log.trace("Resetting search_path to public after request");
             try {
-                jdbcTemplate.execute("RESET search_path");
+                jdbcTemplate.execute("SET search_path TO public");
             } catch (Exception e) {
                 log.trace("Error resetting search_path: {}", e.getMessage());
             }
