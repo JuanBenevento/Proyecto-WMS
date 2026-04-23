@@ -88,11 +88,6 @@ public class TenantConnectionFilter extends OncePerRequestFilter {
         }
     }
     
-    @Override
-    public int getFilterOrder() {
-        return FILTER_ORDER;
-    }
-    
     /**
      * Builds the schema name for a given tenant ID.
      * Follows the pattern: tenant_{normalizedTenantId}
