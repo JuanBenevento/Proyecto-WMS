@@ -27,19 +27,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDomainException(DomainException ex) {
         log.warn("Domain exception: {}", ex.getMessage());
         
-        HttpStatus status = switch (ex.getType()) {
-            case NOT_FOUND -> HttpStatus.NOT_FOUND;
-            case VALIDATION -> HttpStatus.BAD_REQUEST;
-            case CONFLICT -> HttpStatus.CONFLICT;
-            case BUSINESS_RULE -> HttpStatus.UNPROCESSABLE_ENTITY;
-            case UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;
-            case FORBIDDEN -> HttpStatus.FORBIDDEN;
-            default -> HttpStatus.INTERNAL_SERVER_ERROR;
-        };
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        String errorCode = "DOMAIN_ERROR";
         
         return ResponseEntity
             .status(status)
-            .body(ApiResponse.error(ex.getMessage(), ex.getType().name()));
+            .body(ApiResponse.error(ex.getMessage(), errorCode));
     }
 
     /**
