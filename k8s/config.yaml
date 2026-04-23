@@ -1,0 +1,20 @@
+# WMS ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wms-config
+data:
+  spring.profiles.active: "prod"
+  java_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+---
+# WMS Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wms-secrets
+type: Opaque
+stringData:
+  database.url: "jdbc:postgresql://postgres:5432/wms_db"
+  database.username: "postgres"
+  database.password: "changeme"
+  jwt.secret: "changeme JWT secret min 256 bits"
