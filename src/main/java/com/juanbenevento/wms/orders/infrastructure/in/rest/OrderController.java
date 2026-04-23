@@ -73,7 +73,7 @@ public class OrderController {
         OrderListResponse response = orderService.listOrders(query);
         
         // Add pagination metadata
-        var pagination = ApiResponse.PaginationMeta.of(page, size, response.totalCount());
+        var pagination = ApiResponse.PaginationMeta.of(page, size, response.totalElements());
         return ResponseEntity.ok(ApiResponse.successPaginated(response, pagination));
     }
 
