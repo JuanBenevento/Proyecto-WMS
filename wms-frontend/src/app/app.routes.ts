@@ -17,6 +17,8 @@ import { GetRackSummaryUseCase } from './modules/warehouse/application/usecases/
 import { OrderRepository } from './modules/orders/domain/ports/repository/order.repository';
 import { OrderRepositoryAdapter } from './modules/orders/infrastructure/adapters/order-repository.adapter';
 import { ManageOrderUseCase } from './modules/orders/application/usecases/manage-order.usecase';
+import { GetDashboardKpisUseCase } from './modules/dashboard/application/usecases/get-dashboard-kpis.usecase';
+import { DashboardRepositoryAdapter } from './modules/dashboard/infrastructure/adapters/dashboard.adapter';
 
 
 const INVENTORY_PROVIDERS = [
@@ -41,6 +43,11 @@ const ORDERS_PROVIDERS = [
   ManageOrderUseCase
 ];
 
+const DASHBOARD_PROVIDERS = [
+  GetDashboardKpisUseCase,
+  DashboardRepositoryAdapter
+];
+
 export const routes: Routes = [
   { 
     path: 'login', 
@@ -62,11 +69,11 @@ export const routes: Routes = [
     loadComponent: () => import('./core/layout/layouts/admin-layout.component').then(m => m.AdminLayoutComponent),
     canActivate: [authGuard, roleGuard],
     data: { role: 'ADMIN' }, 
-    providers: [...INVENTORY_PROVIDERS, ...WAREHOUSE_PROVIDERS, ...ORDERS_PROVIDERS],
+    providers: [...INVENTORY_PROVIDERS, ...WAREHOUSE_PROVIDERS, ...ORDERS_PROVIDERS, ...DASHBOARD_PROVIDERS],
     children: [
       { 
         path: 'dashboard', 
-        loadComponent: () => import('./modules/warehouse/ui/pages/monitor-page/monitor-page.component').then(m => m.MonitorPageComponent) 
+        loadComponent: () => import('./modules/dashboard/ui/dashboard-page/dashboard-page.component').then(m => m.DashboardPageComponent) 
       },
       {
         path: 'warehouse',
