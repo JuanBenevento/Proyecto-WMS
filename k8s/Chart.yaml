@@ -1,0 +1,14 @@
+# WMS Helm Chart
+apiVersion: v2
+name: wms
+description: WMS Enterprise - Warehouse Management System
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - wms
+  - warehouse
+  - management
+maintainers:
+  - name: Juan Manuel Benevento
+    email: juanbenevento@example.com

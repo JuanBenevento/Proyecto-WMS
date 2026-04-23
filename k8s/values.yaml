@@ -1,0 +1,74 @@
+# WMS Helm Chart Values
+# WMS Enterprise - Kubernetes deployment configuration
+
+image:
+  repository: ghcr.io/juanbenevento
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: wms.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "500m"
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Environment variables
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  JWT_EXPIRATION: "86400000"
+
+# Secrets (use external secrets in production)
+secrets:
+  database:
+    url: "jdbc:postgresql://postgres:5432/wms_db"
+    username: "postgres"
+    password: "changeme"
+  jwt:
+    secret: "changeme JWT secret min 256 bits"  # CHANGE IN PRODUCTION
+
+# PostgreSQL (optional - use external in prod)
+postgresql:
+  enabled: false
+  auth:
+    username: postgres
+    password: changeme
+    database: wms_db
+
+# Redis (optional - for distributed cache)
+redis:
+  enabled: false
+  auth:
+    password: changeme
