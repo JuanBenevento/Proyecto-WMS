@@ -27,6 +27,9 @@ WMS Enterprise es un sistema moderno y escalable para la gestión integral de al
 - 🔍 **Trazabilidad Total** - Eventos de dominio persistidos para auditoría
 - 🔐 **Multi-tenant** - Arquitectura SaaS con aislamiento por empresa
 - 🏗️ **Arquitectura Empresarial** - Hexagonal + DDD + Event-Driven
+- 📊 **Dashboard KPIs** - Métricas en tiempo real
+- 🌡️ **Cold Chain** - Control de temperatura para industria alimentaria
+- 📈 **Escalabilidad** - Kubernetes, HPA, Helm charts
 
 ---
 
@@ -210,6 +213,9 @@ Proyecto-WMS/
 | **Picking** | Asignación FEFO, short picks, validación | ✅ |
 | **Auditoría** | Eventos de dominio persistidos | ✅ |
 | **Autenticación** | JWT, multi-tenant, roles | ✅ |
+| **Dashboard** | KPIs y métricas | ✅ |
+| **Cold Chain** | Monitoreo de temperatura | ✅ |
+| **E2E Tests** | Playwright tests | ✅ |
 
 ### Flujo de Operaciones
 
@@ -265,6 +271,23 @@ GET    /api/v1/layout               # Obtener layout
 POST   /api/v1/layout             # Guardar layout
 GET    /api/v1/locations          # Listar ubicaciones
 POST   /api/v1/locations          # Crear ubicación
+
+### Dashboard & KPIs
+```
+GET    /api/v1/dashboard/kpis              # All KPIs
+GET    /api/v1/dashboard/metrics/orders  # Order statistics
+GET    /api/v1/dashboard/metrics/warehouse # Warehouse utilization
+GET    /api/v1/dashboard/activity      # Recent activity
+```
+
+### Cold Chain Monitoring
+```
+POST   /api/v1/monitoring/temperature           # Record temperature
+GET    /api/v1/monitoring/alerts                  # Active alerts
+GET    /api/v1/monitoring/alerts/{location}        # Alerts by location
+GET    /api/v1/monitoring/temperature/history/{location} # Temperature history
+POST   /api/v1/monitoring/alerts/{id}/acknowledge # Acknowledge alert
+```
 ```
 
 ---
@@ -281,6 +304,13 @@ npm test
 
 # Coverage report
 ./mvnw test jacoco:report
+
+# E2E Tests (requires running services)
+cd e2e
+npm install
+npm run test        # All tests
+npm run test:api   # API tests only
+npm run test:ui-suite  # UI tests only
 ```
 
 ### Test Coverage
@@ -290,7 +320,35 @@ npm test
 | Domain | 80+ | 95% |
 | Application | 60+ | 85% |
 | Infrastructure | 45+ | 70% |
-| **Total** | **185+** | **~80%** |
+| **E2E** | 20+ | API + UI |
+| **Total** | **200+** | **~80%** |
+
+---
+
+## ☁️ Deployment
+
+### Docker Compose (Development)
+```bash
+docker-compose up -d
+```
+
+### Docker Compose (Production)
+```bash
+cp .env.production.example .env
+# Edit .env with production values
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Kubernetes (Production)
+```bash
+# Deploy with Helm
+helm install wms ./k8s/values.yaml
+
+# Or apply directly
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/config.yaml
+kubectl apply -f k8s/ingress.yaml
+```
 
 ---
 
