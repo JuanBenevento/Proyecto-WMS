@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    WMS Logging Configuration - Structured JSON logging for production
+    
+    For production, use JSON format for integration with:
+    - ELK Stack (Elasticsearch, Logstash, Kibana)
+    - Datadog
+    - CloudWatch Logs
+    - Prometheus/Grafana Loki
+    
+    For development, uses human-readable console output.
+-->
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <!-- Spring Boot default properties -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    
+    <!-- Spring Boot springProfile for dev/prod switching -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="wms"/>
+    <springProperty scope="context" name="TENANT_ID" source="wms.tenant.isolation.enabled" defaultValue="false"/>
+
+    <!-- ==================== Development Profile ==================== -->
+    <springProfile name="dev,default">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) [%X{tenantId:-system}] %cyan(%logger{36}) - %msg%n</pattern>
+            </encoder>
+        </appender>
+        
+        <!-- File appender for development logs -->
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/wms-dev.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/wms-dev.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+                <maxFileSize>10MB</maxFileSize>
+                <maxHistory>7</maxHistory>
+                <totalSizeCap>100MB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{tenantId:-system}] %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <!-- ==================== Production Profile ==================== -->
+    <springProfile name="prod,staging">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+                <layout class="ch.qos.logback.contrib.json.classic.JsonLayout">
+                    <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timestampFormat>
+                    <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timestampFormat>
+                    <appendLineSeparator>true</appendLineSeparator>
+                    <jsonFormatter class="ch.qos.logback.contrib.jackson.JacksonJsonFormatter">
+                        <prettyPrint>false</prettyPrint>
+                    </jsonFormatter>
+                </layout>
+            </encoder>
+        </appender>
+        
+        <!-- Alternative: Standard pattern with structured fields for JSON parsing -->
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!-- JSON-like structured format for parsing by log aggregators -->
+                <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","tenant":"%X{tenantId:-system}","thread":"%thread","logger":"%logger{36}","message":"%msg","service":"${APP_NAME}"}%n</pattern>
+            </encoder>
+        </appender>
+
+        <!-- File appender for production with JSON format -->
+        <appender name="FILE_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/wms-prod.json</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/wms-prod.%d{yyyy-MM-dd}.%i.json</fileNamePattern>
+                <maxFileSize>100MB</maxFileSize>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","tenant":"%X{tenantId:-system}","thread":"%thread","logger":"%logger{36}","message":"%msg","service":"${APP_NAME}"}%n</pattern>
+            </encoder>
+        </appender>
+
+        <!-- Async appender for performance -->
+        <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+            <queueSize>512</queueSize>
+            <discardingThreshold>0</discardingThreshold>
+            <includeCallerData>false</includeCallerData>
+            <appender-ref ref="FILE_JSON"/>
+        </appender>
+    </springProfile>
+
+    <!-- ==================== Root Logger ==================== -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <springProfile name="prod,staging">
+            <appender-ref ref="ASYNC_FILE"/>
+        </springProfile>
+    </root>
+
+    <!-- ==================== Package-specific levels ==================== -->
+    
+    <!-- Audit module - INFO in production -->
+    <logger name="com.juanbenevento.wms.audit" level="INFO"/>
+    
+    <!-- Tenant isolation - INFO -->
+    <logger name="com.juanbenevento.wms.shared.infrastructure.tenant" level="INFO"/>
+    
+    <!-- Hibernate SQL - DEBUG in dev, WARN in prod -->
+    <springProfile name="dev">
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+    </springProfile>
+    <springProfile name="prod,staging">
+        <logger name="org.hibernate.SQL" level="WARN"/>
+    </springProfile>
+
+    <!-- Spring framework - reduce noise -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.springframework.web" level="WARN"/>
+    
+    <!-- Tomcat -->
+    <logger name="org.apache.catalina" level="WARN"/>
+    <logger name="org.apache.tomcat" level="WARN"/>
+    
+    <!-- HikariCP connection pool -->
+    <logger name="com.zaxxer.hikari" level="INFO"/>
+    
+</configuration>

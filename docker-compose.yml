@@ -1,0 +1,121 @@
+# =============================================================================
+# WMS Enterprise - Docker Compose for Local Development
+# =============================================================================
+# Usage:
+#   - Development:    docker-compose up -d
+#   - With logs:      docker-compose up
+#   - Stop:           docker-compose down
+#   - Rebuild:        docker-compose up --build
+#   - Clean:          docker-compose down -v (deletes volumes!)
+# =============================================================================
+
+services:
+  # -----------------------------------------------------------------------------
+  # PostgreSQL Database
+  # -----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: wms-postgres
+    environment:
+      POSTGRES_DB: wms_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: wms_secret_pass
+      # Performance tuning
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wms_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - wms-network
+
+  # -----------------------------------------------------------------------------
+  # WMS Backend (Spring Boot)
+  # -----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wms-backend
+    environment:
+      # Database - references the postgres service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wms_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: wms_secret_pass
+      # JPA/Hibernate
+      SPRING_JPA_HIBERNATE_DDL-AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      # Flyway migrations
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+      SPRING_FLYWAY_BASELINE-ON-MIGRATE: "true"
+      # Security
+      JWT_SECRET_KEY: wms-jwt-secret-key-for-local-dev-only-change-in-production-min-256bits
+      JWT_EXPIRATION: "86400000"
+      # Server
+      SERVER_PORT: "8080"
+      # Actuator
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics
+      # Multi-tenant schema isolation (disabled for local dev, enable in prod)
+      WMS_TENANT_ISOLATION_ENABLED: "false"
+      WMS_TENANT_RLS_ENABLED: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - wms-network
+    restart: unless-stopped
+
+  # -----------------------------------------------------------------------------
+  # WMS Frontend (Angular)
+  # -----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./wms-frontend
+      dockerfile: Dockerfile
+    container_name: wms-frontend
+    environment:
+      # API URL - points to backend service
+      NG_API_URL: http://localhost:8080/api/v1
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - wms-network
+    restart: unless-stopped
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  wms-network:
+    driver: bridge
+
+# -----------------------------------------------------------------------------
+# Volumes (Persistent Data)
+# -----------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local

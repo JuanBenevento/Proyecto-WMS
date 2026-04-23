@@ -1,0 +1,207 @@
+# =============================================================================
+# WMS Enterprise - Docker Compose for PRODUCTION
+# =============================================================================
+# Usage:
+#   docker-compose -f docker-compose.prod.yml up -d
+#   docker-compose -f docker-compose.prod.yml logs -f
+#   docker-compose -f docker-compose.prod.yml down
+# =============================================================================
+
+services:
+  # -----------------------------------------------------------------------------
+  # PostgreSQL Database (Production)
+  # -----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: wms-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-wms_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    # Production tuning
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=512MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=8MB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-wms_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wms-network
+    restart: always
+    # Security: production should use secrets, not env vars
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 4G
+
+  # -----------------------------------------------------------------------------
+  # WMS Backend (Spring Boot - Production)
+  # -----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Build args
+        JAR_FILE: app.jar
+    container_name: wms-backend
+    environment:
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-wms_db}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      # Use HikariCP connection pool for production
+      SPRING_DATASOURCE_HIKARI_MAXIMUM-POOL-SIZE: "20"
+      SPRING_DATASOURCE_HIKARI_MINIMUM-IDELE: "5"
+      SPRING_DATASOURCE_HIKARI_CONNECTION-TIMEOUT: "30000"
+      SPRING_DATASOURCE_HIKARI_IDLE-TIMEOUT: "600000"
+      SPRING_DATASOURCE_HIKARI_MAX-LIFETIME: "1800000"
+      # JPA/Hibernate - validate in prod
+      SPRING_JPA_HIBERNATE_DDL-AUTO: "validate"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "false"
+      # Flyway - migrations enabled in prod
+      SPRING_FLYWAY_ENABLED: "true"
+      # Security
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_EXPIRATION: "${JWT_EXPIRATION:-86400000}"
+      # Server - production settings
+      SERVER_PORT: "8080"
+      SERVER_COMPRESSION_ENABLED: "true"
+      # Actuator - limited exposure in prod
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,metrics,prometheus"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS: "when_authorized"
+      # Multi-tenant - ENABLE in production
+      WMS_TENANT_ISOLATION_ENABLED: "${WMS_TENANT_ISOLATION_ENABLED:-true}"
+      WMS_TENANT_RLS_ENABLED: "${WMS_TENANT_RLS_ENABLED:-true}"
+      # Logging - JSON for ELK
+      LOGGING_FORMAT: "${LOGGING_FORMAT:-json}"
+      # Resilience
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_REGISTERFORCIRCUITBREAKER_EXceptions: "true"
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_SLIDINGWINDOW-SIZE: "10"
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_PERMITTEDNUMBEROF CALLSINHALFOPENSTATE: "3"
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_WAITDURATIONINOPENSTATE: "60s"
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_FAILURERATETHRESHOLD: "50"
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - wms-network
+    restart: always
+
+  # -----------------------------------------------------------------------------
+  # WMS Frontend (Angular - Production)
+  # -----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./wms-frontend
+      dockerfile: Dockerfile
+      args:
+        NG_ENV: production
+    container_name: wms-frontend
+    environment:
+      NG_API_URL: ${API_URL:-http://localhost:8080/api/v1}
+      NG_APP_BASE_HREF: /
+      NG_APP_TITLE: "WMS Enterprise"
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - wms-network
+    restart: always
+
+  # -----------------------------------------------------------------------------
+  # Optional: Prometheus (Metrics Collection)
+  # -----------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: wms-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - wms-network
+    restart: always
+    profiles:
+      - monitoring
+
+  # -----------------------------------------------------------------------------
+  # Optional: Grafana (Dashboards)
+  # -----------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: wms-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - wms-network
+    restart: always
+    profiles:
+      - monitoring
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  wms-network:
+    driver: bridge
+
+# -----------------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  grafana_data:
+    driver: local

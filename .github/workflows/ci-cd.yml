@@ -1,0 +1,253 @@
+name: WMS CI/CD Pipeline 🚀
+
+# DISABLED - Usar solo maven.yml para evitar conflictos
+# habilitar cuando este listo para produccion
+
+# on:
+#   push:
+#     branches: [dev, main]
+#   pull_request:
+#     branches: [main]
+#   workflow_dispatch:
+
+env:
+  JAVA_VERSION: '21'
+  NODE_VERSION: '20'
+
+jobs:
+  # ===========================================================================
+  # Build and Test Backend
+  # ===========================================================================
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: wms_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Grant execute permission for mvnw
+        run: chmod +x mvnw
+
+      - name: Build with Maven
+        run: ./mvnw clean verify -B
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-artifacts
+          path: target/*.jar
+
+  # ===========================================================================
+  # Build Frontend
+  # ===========================================================================
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: wms-frontend/package-lock.json
+
+      - name: Install Frontend dependencies
+        working-directory: wms-frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: wms-frontend
+        run: npm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-artifacts
+          path: wms-frontend/dist
+
+  # ===========================================================================
+  # E2E Tests (when tagged)
+  # ===========================================================================
+  e2e:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: contains(github.ref, 'tags/e2e') || contains(github.event.inputs.run_e2e, 'true')
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: wms_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      backend:
+        image: postgres:16
+        env:
+          POSTGRES_DB: wms_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 8080:8080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Playwright
+        run: npm ci -g @playwright/install
+
+      - name: Install E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Start services
+        run: docker-compose up -d
+
+      - name: Wait for services
+        run: |
+          sleep 30
+          until curl -f http://localhost:8080/actuator/health; do
+            echo "Waiting for backend..."
+            sleep 5
+          done
+
+      - name: Run API tests
+        working-directory: e2e
+        run: npm run test:api || true
+
+      - name: Run UI tests
+        working-directory: e2e
+        run: npm run test:ui-suite || true
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: e2e/reports
+
+  # ===========================================================================
+  # Docker Build (on merge to main)
+  # ===========================================================================
+  docker:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./wms-frontend
+          file: ./wms-frontend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+  # Deploy to Staging (on main push with tag)
+  # ===========================================================================
+  deploy-staging:
+    needs: [docker]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && contains(github.ref, 'refs/tags/v')
+    environment:
+      name: staging
+      url: https://staging.wms.example.com
+
+    steps:
+      - name: Deploy to Staging
+        run: |
+          echo "Deploying to staging..."
+          # Add your deployment commands here
+          # Examples:
+          # - kubectl apply -f k8s/
+          # - helm upgrade wms ./charts/wms --set image.tag=${{ github.sha }}
+
+  # ===========================================================================
+  # Notify (on completion)
+  # ===========================================================================
+  notify:
+    needs: [backend, frontend, docker]
+    if: always() && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            target/surefire-reports/
+            target/jacoco-reports/
+            e2e/reports/
+
+      - name: Post summary
+        run: |
+          echo "## ✅ Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: ${{ needs.backend.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ needs.frontend.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker: ${{ needs.docker.result }}" >> $GITHUB_STEP_SUMMARY

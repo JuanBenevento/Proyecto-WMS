@@ -5,9 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
-import org.hibernate.annotations.ParamDef;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -16,20 +13,22 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/**
+ * Entidad base para todas las entidades del WMS que requieren auditoría.
+ *
+ * NOTA: La columna tenant_id se mantiene SOLO por compatibilidad hacia atrás
+ * durante el período de migración. El aislamiento de tenants ahora es manejado
+ * a nivel de base de datos mediante schemas (search_path), no por esta columna.
+ *
+ * En el futuro, esta columna será removida para tablas que usan aislamiento por schema.
+ * Se mantiene para tablas compartidas entre tenants (lookups, catálogos).
+ */
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @MappedSuperclass
 @EntityListeners({AuditingEntityListener.class, TenantEntityListener.class})
-@FilterDef(
-        name = "tenantFilter",
-        parameters = @ParamDef(name = "tenantId", type = String.class)
-)
-@Filter(
-        name = "tenantFilter",
-        condition = "tenant_id = :tenantId"
-)
 public abstract class AuditableEntity {
 
     @CreatedBy
@@ -46,6 +45,14 @@ public abstract class AuditableEntity {
     @LastModifiedDate
     private LocalDateTime lastModifiedDate;
 
+    /**
+     * Columna mantenida solo para compatibilidad hacia atrás durante migración.
+     * No es usada para aislamiento - el aislamiento es por schema (search_path).
+     *
+     * @deprecated El aislamiento de tenants ahora es por schema.
+     *             Esta columna será removida en futuras versiones.
+     */
+    @Deprecated
     @Column(name = "tenant_id", nullable = false, updatable = false)
     private String tenantId;
 

@@ -1,113 +1,81 @@
-# WMS - Roadmap de Desarrollo Futuro
+# WMS - Roadmap de Desarrollo
 
-## 📋 Estado Actual (Abril 2025)
+## 📋 Estado Actual (Abril 2026)
 
-### ✅ Completado (Plan #1)
-- Endpoints REST estandarizados
-- Value Objects (LPN, BatchNumber)
-- Tests passing (185)
-- Documentación completa
+### ✅ Completado - WMS Enterprise v1.0
 
-### 🚀 Próximos Pasos Sugeridos
-
----
-
-## 🎯 Phase 1: Estabilización (2-3 semanas)
-
-### Objetivos
-- [ ] Hacer el proyecto executable fácil
-- [ ] Fix tests deshabilitados
-- [ ] API Response estándar
-
-### Tareas
-1. **Docker Compose** - Levantar todo con un comando
-   ```yaml
-   # docker-compose.yml
-   services:
-     postgres:
-       image: postgres:16
-       environment:
-         POSTGRES_DB: wms_db
-       ports:
-         - "5432:5432"
-   
-     app:
-       build: .
-       ports:
-         - "8080:8080"
-       depends_on:
-         - postgres
-   ```
-
-2. **Fix EventPersistenceIntegrationTest** - Investigar y corregir
-
-3. **API Response Wrapper** - Estandarizar respuestas
-   ```java
-   public record ApiResponse<T>(T data, String message, boolean success) {}
-   ```
+| Phase | Descripción | Estado |
+|-------|------------|---------|
+| **Phase 1** | Estabilización (Docker, Tests, API) | ✅ |
+| **Phase 2** | Observabilidad (Actuator, Prometheus) | ✅ |
+| **Phase 3** | Performance (Caching, N+1) | ✅ |
+| **Phase 4** | Seguridad (JWT upgrade) | ✅ |
 
 ---
 
-## 🎯 Phase 2: Observabilidad (2 semanas)
+## 🎯 Option A: Tests E2E + Production ✅ (Completado)
 
-### Objetivos
-- [ ] Health checks
-- [ ] Métricas
-- [ ] Logging estructurado
-
-### Tareas
-1. Agregar Spring Boot Actuator
-2. Agregar Micrometer + Prometheus
-3. Agregar Circuit Breaker (Resilience4j)
+- [x] Playwright E2E test framework
+- [x] API tests (Auth, Products, Orders, Inventory)
+- [x] UI tests (Auth, Orders, Inventory)
+- [x] docker-compose.prod.yml
+- [x] Full CI/CD pipeline
 
 ---
 
-## 🎯 Phase 3: Performance (2-3 semanas)
+## 🎯 Option B: Dashboard + Reports ✅ (Completado)
 
-### Objetivos
-- [ ] Caching
-- [ ] Query optimization
-- [ ] Pagination
-
-### Tareas
-1. Implementar caching con Redis/Guava
-2. Optimizar queries N+1 con JOINs
-3. Agregar pagination efectivo en endpoints
+- [x] GET /api/v1/dashboard/kpis
+- [x] GET /api/v1/dashboard/metrics/orders
+- [x] GET /api/v1/dashboard/metrics/warehouse
+- [x] GET /api/v1/dashboard/activity
 
 ---
 
-## 🎯 Phase 4: Escalabilidad (3-4 semanas)
+## 🎯 Option C: Scalability ✅ (Completado)
 
-### Objetivos
-- [ ] Kubernetes ready
-- [ ] CI/CD
-- [ ] External config
-
-### Tareas
-1. Dockerize la aplicación
-2. Crear pipeline de GitHub Actions
-3. Externalizar configuración a config server
+- [x] Kubernetes deployment
+- [x] Helm chart
+- [x] Horizontal Pod Autoscaler (HPA)
+- [x] Ingress configuration
+- [x] External configuration template
 
 ---
 
-## 📊 Recursos Necesarios
+## 🎯 Option D: Industrial Expansion ✅ (Completado)
 
-### Para completar todo el roadmap:
-- **Backend**: ~3-4 meses
-- **Frontend**: ~2 meses adicionales
-
-### Equipo sugerido:
-- 1-2 developers full-stack
-- DevOps para infraestructura
+- [x] Cold chain monitoring service
+- [x] Temperature alerts (HIGH/LOW)
+- [x] Temperature history
+- [x] Alert acknowledgment
+- [x] Allocation strategies (FEFO, FIFO, WeightCertification)
 
 ---
 
-## 💡 Recomendación Inmediata
+## 📊 Recursos del Proyecto
 
-1. **Hacer executable el proyecto** - Prioridad máxima
-2. **Docker Compose** - Facilitar onboarding
-3. **Documentar API** - Usar Swagger existente
+### Stack Tecnológico
+- **Backend**: Java 21 LTS, Spring Boot 3.4
+- **Frontend**: Angular 20
+- **Database**: PostgreSQL 16
+- **Security**: JWT (jjwt 0.12.5)
+- **Testing**: JUnit, Mockito, Playwright
+
+### Métricas
+- **Tests unitarios**: 185+
+- **Tests E2E**: 20+
+- **Cobertura**: ~80%
 
 ---
 
-*Documento generado: 2025-04-20*
+## 🚀 Siguiente Versión (v1.1)
+
+### Propuestas para继续:
+1. **Production hardening**: Más tests E2E, stress tests
+2. **Dashboard avanzado**: Gráficos, Chart.js
+3. **Reportes**: PDF/Excel export
+4. **Integraciones**: APIs externas, webhooks
+
+---
+
+*Actualizado: 2026-04-23*

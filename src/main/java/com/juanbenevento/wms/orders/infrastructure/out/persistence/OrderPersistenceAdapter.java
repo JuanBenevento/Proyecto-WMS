@@ -42,7 +42,7 @@ public class OrderPersistenceAdapter implements OrderRepositoryPort {
 
     @Override
     public List<Order> findByCustomerId(String customerId) {
-        return jpaRepository.findByCustomerId(customerId)
+        return jpaRepository.findByCustomerIdWithLines(customerId)
                 .stream()
                 .map(mapper::toOrderDomain)
                 .collect(Collectors.toList());
@@ -50,7 +50,7 @@ public class OrderPersistenceAdapter implements OrderRepositoryPort {
 
     @Override
     public List<Order> findByWarehouseId(String warehouseId) {
-        return jpaRepository.findByWarehouseId(warehouseId)
+        return jpaRepository.findByWarehouseIdWithLines(warehouseId)
                 .stream()
                 .map(mapper::toOrderDomain)
                 .collect(Collectors.toList());
@@ -58,7 +58,7 @@ public class OrderPersistenceAdapter implements OrderRepositoryPort {
 
     @Override
     public List<Order> findByStatus(OrderStatus status) {
-        return jpaRepository.findByStatus(status)
+        return jpaRepository.findByStatusWithLines(status)
                 .stream()
                 .map(mapper::toOrderDomain)
                 .collect(Collectors.toList());
@@ -74,7 +74,7 @@ public class OrderPersistenceAdapter implements OrderRepositoryPort {
 
     @Override
     public List<Order> findAll() {
-        return jpaRepository.findAll()
+        return jpaRepository.findAllWithLines()
                 .stream()
                 .map(mapper::toOrderDomain)
                 .collect(Collectors.toList());

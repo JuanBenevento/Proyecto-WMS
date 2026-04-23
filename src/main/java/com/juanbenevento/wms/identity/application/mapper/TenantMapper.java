@@ -8,6 +8,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class TenantMapper {
 
+    /**
+     * Maps Tenant domain model to TenantResponse DTO.
+     *
+     * @param tenant the tenant domain model
+     * @return the tenant response DTO with schema information
+     */
     public TenantResponse toTenantResponse(Tenant tenant) {
         if (tenant == null) return null;
         return new TenantResponse(
@@ -16,6 +22,27 @@ public class TenantMapper {
                 tenant.getStatus().name(),
                 tenant.getContactEmail(),
                 tenant.getCreatedAt()
+        );
+    }
+
+    /**
+     * Maps Tenant domain model to TenantResponse DTO with schema status.
+     *
+     * @param tenant the tenant domain model
+     * @param schemaName the PostgreSQL schema name for this tenant
+     * @param schemaStatus the schema creation status
+     * @return the tenant response DTO with schema information
+     */
+    public TenantResponse toTenantResponse(Tenant tenant, String schemaName, String schemaStatus) {
+        if (tenant == null) return null;
+        return new TenantResponse(
+                tenant.getId(),
+                tenant.getName(),
+                tenant.getStatus().name(),
+                tenant.getContactEmail(),
+                tenant.getCreatedAt(),
+                schemaName,
+                schemaStatus
         );
     }
 

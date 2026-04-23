@@ -27,6 +27,9 @@ WMS Enterprise es un sistema moderno y escalable para la gestión integral de al
 - 🔍 **Trazabilidad Total** - Eventos de dominio persistidos para auditoría
 - 🔐 **Multi-tenant** - Arquitectura SaaS con aislamiento por empresa
 - 🏗️ **Arquitectura Empresarial** - Hexagonal + DDD + Event-Driven
+- 📊 **Dashboard KPIs** - Métricas en tiempo real
+- 🌡️ **Cold Chain** - Control de temperatura para industria alimentaria
+- 📈 **Escalabilidad** - Kubernetes, HPA, Helm charts
 
 ---
 
@@ -77,13 +80,59 @@ WMS Enterprise es un sistema moderno y escalable para la gestión integral de al
 
 ### Prerequisites
 
+- **Docker** 20.10+ with Docker Compose
+- **8GB RAM** minimum (recommended 16GB)
+- **20GB disk space**
+
+### Option 1: Docker Compose (Recommended for Development)
+
+La forma más rápida de levantar todo el sistema:
+
+```bash
+# Clonar repositorio
+git clone https://github.com/JuanBenevento/Proyecto-WMS.git
+cd Proyecto-WMS
+
+# Levantar todos los servicios (PostgreSQL + Backend + Frontend)
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Ver estado de servicios
+docker-compose ps
+```
+
+**Tiempo de primer arranque:** ~3-5 minutos (depende de descarga de imágenes)
+
+**Una vez levantado:**
+
+| Servicio | URL | Credenciales |
+|----------|-----|--------------|
+| Frontend | http://localhost:4200 | superadmin / admin123 |
+| API | http://localhost:8080/api/v1 | - |
+| Swagger | http://localhost:8080/swagger-ui.html | - |
+| Health | http://localhost:8080/actuator/health | - |
+
+**Detener:**
+```bash
+docker-compose down                    # Detiene servicios
+docker-compose down -v               # Detiene Y elimina datos
+```
+
+---
+
+### Option 2: Manual Setup (Desarrollo Local)
+
+#### Prerequisites
+
 - **Java** 21 LTS
 - **Maven** 3.9+
 - **Node.js** 20+
-- **PostgreSQL** 16+ (production)
+- **PostgreSQL** 16+
 - **H2** (development/tests)
 
-### Installation
+#### Installation
 
 ```bash
 # Clone repository
@@ -164,6 +213,9 @@ Proyecto-WMS/
 | **Picking** | Asignación FEFO, short picks, validación | ✅ |
 | **Auditoría** | Eventos de dominio persistidos | ✅ |
 | **Autenticación** | JWT, multi-tenant, roles | ✅ |
+| **Dashboard** | KPIs y métricas | ✅ |
+| **Cold Chain** | Monitoreo de temperatura | ✅ |
+| **E2E Tests** | Playwright tests | ✅ |
 
 ### Flujo de Operaciones
 
@@ -219,6 +271,23 @@ GET    /api/v1/layout               # Obtener layout
 POST   /api/v1/layout             # Guardar layout
 GET    /api/v1/locations          # Listar ubicaciones
 POST   /api/v1/locations          # Crear ubicación
+
+### Dashboard & KPIs
+```
+GET    /api/v1/dashboard/kpis              # All KPIs
+GET    /api/v1/dashboard/metrics/orders  # Order statistics
+GET    /api/v1/dashboard/metrics/warehouse # Warehouse utilization
+GET    /api/v1/dashboard/activity      # Recent activity
+```
+
+### Cold Chain Monitoring
+```
+POST   /api/v1/monitoring/temperature           # Record temperature
+GET    /api/v1/monitoring/alerts                  # Active alerts
+GET    /api/v1/monitoring/alerts/{location}        # Alerts by location
+GET    /api/v1/monitoring/temperature/history/{location} # Temperature history
+POST   /api/v1/monitoring/alerts/{id}/acknowledge # Acknowledge alert
+```
 ```
 
 ---
@@ -235,6 +304,13 @@ npm test
 
 # Coverage report
 ./mvnw test jacoco:report
+
+# E2E Tests (requires running services)
+cd e2e
+npm install
+npm run test        # All tests
+npm run test:api   # API tests only
+npm run test:ui-suite  # UI tests only
 ```
 
 ### Test Coverage
@@ -244,7 +320,35 @@ npm test
 | Domain | 80+ | 95% |
 | Application | 60+ | 85% |
 | Infrastructure | 45+ | 70% |
-| **Total** | **185+** | **~80%** |
+| **E2E** | 20+ | API + UI |
+| **Total** | **200+** | **~80%** |
+
+---
+
+## ☁️ Deployment
+
+### Docker Compose (Development)
+```bash
+docker-compose up -d
+```
+
+### Docker Compose (Production)
+```bash
+cp .env.production.example .env
+# Edit .env with production values
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Kubernetes (Production)
+```bash
+# Deploy with Helm
+helm install wms ./k8s/values.yaml
+
+# Or apply directly
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/config.yaml
+kubectl apply -f k8s/ingress.yaml
+```
 
 ---
 
@@ -281,29 +385,22 @@ npm test
 
 ## 🚢 Deployment
 
-### Docker Compose (Desarrollo)
+### Docker Compose (Desarrollo y Staging)
 
-```yaml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: wms_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-  
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/wms_db
-      JWT_SECRET_KEY: your-secret-key
-    depends_on:
-      - postgres
+El proyecto incluye `docker-compose.yml` listo para usar:
+
+```bash
+# Desarrollo completo (PostgreSQL + Backend + Frontend)
+docker-compose up -d
+
+# Con rebuild si hay cambios
+docker-compose up --build -d
+
+# Ver todos los logs
+docker-compose logs -f backend
+
+# Escalar backend (producción)
+docker-compose up -d --scale backend=3
 ```
 
 ### Kubernetes (Producción)
@@ -313,7 +410,21 @@ services:
 helm install wms ./charts/wms \
   --set database.host=postgres.prod.svc \
   --set jwt.secretKey=$JWT_SECRET_KEY
+
+# O usando docker-compose con orchestador externo
+docker-compose -f docker-compose.yml config > docker-stack.yml
+docker stack deploy -c docker-stack.yml wms
 ```
+
+### Environment Variables para Producción
+
+| Variable | Descripción | Requerido |
+|----------|-------------|-----------|
+| `SPRING_DATASOURCE_URL` | JDBC URL de PostgreSQL | ✅ |
+| `SPRING_DATASOURCE_PASSWORD` | Password de DB | ✅ |
+| `JWT_SECRET_KEY` | Clave JWT (min 256 bits) | ✅ |
+| `WMS_TENANT_ISOLATION_ENABLED` | Habilitar schema isolation | Opcional |
+| `WMS_TENANT_RLS_ENABLED` | Habilitar RLS policies | Opcional |
 
 ---
 

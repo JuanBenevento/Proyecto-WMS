@@ -100,6 +100,26 @@ BREAKING CHANGE: El campo lpn ahora es un objeto con validaciones.
 ./mvnw test -Dtest=NombreDelTest
 ```
 
+### E2E Tests (Playwright)
+
+```bash
+# Instalar dependencias
+cd e2e
+npm install
+
+# Todos los tests
+npm run test
+
+# Solo API tests
+npm run test:api
+
+# Solo UI tests
+npm run test:ui-suite
+
+# Modo interactivo
+npm run test:ui
+```
+
 ### Principios
 
 1. **Testea el comportamiento, no la implementación**
