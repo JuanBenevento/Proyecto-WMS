@@ -4,6 +4,7 @@ import com.juanbenevento.wms.integration.config.SynchronousEventBusTestConfig;
 import com.juanbenevento.wms.integration.config.TestConfig;
 import com.juanbenevento.wms.orders.application.port.in.command.CreateOrderCommand;
 import com.juanbenevento.wms.orders.application.port.in.command.CreateOrderLineCommand;
+import com.juanbenevento.wms.orders.application.port.in.command.CancelOrderCommand;
 import com.juanbenevento.wms.orders.application.service.OrderService;
 import com.juanbenevento.wms.orders.infrastructure.out.persistence.SpringDataDomainEventRepository;
 import com.juanbenevento.wms.orders.infrastructure.out.persistence.DomainEventEntity;
@@ -176,7 +177,7 @@ class EventPersistenceIntegrationTest {
         domainEventRepository.flush();
 
         // WHEN
-        orderService.cancelOrder(createResponse.orderId(), "TEST_CANCEL");
+        orderService.cancelOrder(new CancelOrderCommand(createResponse.orderId(), "TEST_CANCEL", "Test cancellation"));
         domainEventRepository.flush();
 
         // THEN

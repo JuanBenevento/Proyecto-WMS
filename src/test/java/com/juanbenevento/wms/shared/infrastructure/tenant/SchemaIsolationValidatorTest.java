@@ -10,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -20,12 +22,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Unit tests for SchemaIsolationValidator.
  * Tests validation and debugging methods for tenant schema isolation.
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class SchemaIsolationValidatorTest {
 
     @Mock
@@ -57,10 +61,10 @@ class SchemaIsolationValidatorTest {
             String tenantId = "test_tenant";
             TenantContext.setTenantId(tenantId);
 
-            when(jdbcTemplate.queryForObject(
+            when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    eq(String.class)
-            )).thenReturn("tenant_test_tenant");
+                    any(RowMapper.class)
+            )).thenReturn(List.of("tenant_test_tenant"));
 
             // WHEN/THEN - No exception should be thrown
             assertDoesNotThrow(() -> schemaIsolationValidator.validateCurrentSchema());
