@@ -25,9 +25,24 @@ public interface SpringDataOrderRepository extends JpaRepository<OrderEntity, St
 
     List<OrderEntity> findByWarehouseIdAndStatus(String warehouseId, OrderStatus status);
 
-    @Query("SELECT o FROM OrderEntity o LEFT JOIN FETCH o.lines WHERE o.orderId = :orderId")
+    @Query("SELECT DISTINCT o FROM OrderEntity o LEFT JOIN FETCH o.lines WHERE o.orderId = :orderId")
     Optional<OrderEntity> findByIdWithLines(@Param("orderId") String orderId);
 
     @Query("SELECT DISTINCT o FROM OrderEntity o LEFT JOIN FETCH o.lines WHERE o.warehouseId = :warehouseId AND o.status = :status")
     List<OrderEntity> findByWarehouseIdAndStatusWithLines(@Param("warehouseId") String warehouseId, @Param("status") OrderStatus status);
+
+    // ===== Phase 3.3: N+1 Query Optimization =====
+    // Added JOIN FETCH to avoid N+1 queries when loading order lines
+
+    @Query("SELECT DISTINCT o FROM OrderEntity o LEFT JOIN FETCH o.lines WHERE o.customerId = :customerId")
+    List<OrderEntity> findByCustomerIdWithLines(@Param("customerId") String customerId);
+
+    @Query("SELECT DISTINCT o FROM OrderEntity o LEFT JOIN FETCH o.lines WHERE o.warehouseId = :warehouseId")
+    List<OrderEntity> findByWarehouseIdWithLines(@Param("warehouseId") String warehouseId);
+
+    @Query("SELECT DISTINCT o FROM OrderEntity o LEFT JOIN FETCH o.lines WHERE o.status = :status")
+    List<OrderEntity> findByStatusWithLines(@Param("status") OrderStatus status);
+
+    @Query("SELECT DISTINCT o FROM OrderEntity o LEFT JOIN FETCH o.lines")
+    List<OrderEntity> findAllWithLines();
 }
