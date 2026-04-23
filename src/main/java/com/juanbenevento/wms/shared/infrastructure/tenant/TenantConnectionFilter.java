@@ -73,18 +73,30 @@ public class TenantConnectionFilter extends OncePerRequestFilter {
         String schemaName = buildSchemaName(tenantId);
         
         try {
-            // Set search_path to tenant schema
+            // Try to set search_path to tenant schema
+            // If schema doesn't exist, this will fail - we handle it gracefully
             log.debug("Setting search_path to '{}' for tenant '{}'", schemaName, tenantId);
             jdbcTemplate.execute("SET search_path TO " + schemaName);
             
             // Proceed with the request
             filterChain.doFilter(request, response);
             
+        } catch (Exception e) {
+            // Schema doesn't exist or other DB error - log and continue with public schema
+            log.warn("Could not set tenant schema '{}' (may not exist): {}. Using default schema.", 
+                    schemaName, e.getMessage());
+            // Continue without tenant isolation - queries will use default schema
+            filterChain.doFilter(request, response);
+            
         } finally {
             // Clean up search_path to prevent tenant leakage
             // This ensures connection is clean for next tenant
             log.trace("Resetting search_path after request");
-            jdbcTemplate.execute("RESET search_path");
+            try {
+                jdbcTemplate.execute("RESET search_path");
+            } catch (Exception e) {
+                log.trace("Error resetting search_path: {}", e.getMessage());
+            }
         }
     }
     
