@@ -78,7 +78,7 @@ class TenantIsolationIntegrationTest {
 
     @Nested
     @DisplayName("Schema Creation Tests")
-    @TestMethodOrder(OrderAnnotation.class)
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     class SchemaCreationTests {
 
         @Test
@@ -119,7 +119,7 @@ class TenantIsolationIntegrationTest {
 
     @Nested
     @DisplayName("Isolation Tests")
-    @TestMethodOrder(OrderAnnotation.class)
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     class IsolationTests {
 
         @Test
