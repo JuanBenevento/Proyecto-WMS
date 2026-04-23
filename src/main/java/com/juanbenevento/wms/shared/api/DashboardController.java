@@ -1,5 +1,6 @@
 package com.juanbenevento.wms.shared.api;
 
+import com.juanbenevento.wms.orders.application.port.out.OrderRepositoryPort;
 import com.juanbenevento.wms.orders.domain.model.Order;
 import com.juanbenevento.wms.orders.domain.model.OrderStatus;
 import com.juanbenevento.wms.shared.infrastructure.rest.ApiResponse;
@@ -36,22 +37,19 @@ public class DashboardController {
         Map<String, Object> kpis = new HashMap<>();
 
         // Order KPIs
-        List<?> allOrders = orderRepository.findAll();
+        List<Order> allOrders = orderRepository.findAll();
         long totalOrders = allOrders.size();
         long pendingOrders = allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.PENDING)
+            .filter(o -> o.getStatus() == OrderStatus.PENDING)
             .count();
         long inProgressOrders = allOrders.stream()
             .filter(o -> {
-                var status = ((Order) o).getStatus();
+                OrderStatus status = o.getStatus();
                 return status == OrderStatus.PICKING || status == OrderStatus.PACKED || status == OrderStatus.SHIPPED;
             })
             .count();
         long completedOrders = allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.DELIVERED)
-            .count();
-        long cancelledOrders = allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.CANCELLED)
+            .filter(o -> o.getStatus() == OrderStatus.DELIVERED)
             .count();
 
         Map<String, Object> orders = new HashMap<>();
@@ -59,23 +57,18 @@ public class DashboardController {
         orders.put("pending", pendingOrders);
         orders.put("inProgress", inProgressOrders);
         orders.put("completed", completedOrders);
-        orders.put("cancelled", cancelledOrders);
-        orders.put("completionRate", totalOrders > 0 ?
-            Math.round((double) completedOrders / totalOrders * 100 * 100) / 100.0 : 0);
 
         // Warehouse KPIs
-        List<?> allLocations = locationRepository.findAll();
+        List<Location> allLocations = locationRepository.findAll();
         long totalLocations = allLocations.size();
         long usedLocations = allLocations.stream()
-            .filter(l -> ((Location) l).getCurrentQuantity() != null && ((Location) l).getCurrentQuantity() > 0)
+            .filter(l -> l.getCurrentQuantity() != null && l.getCurrentQuantity() > 0)
             .count();
 
         Map<String, Object> warehouse = new HashMap<>();
         warehouse.put("total", totalLocations);
         warehouse.put("used", usedLocations);
         warehouse.put("available", totalLocations - usedLocations);
-        warehouse.put("utilizationRate", totalLocations > 0 ?
-            Math.round((double) usedLocations / totalLocations * 100 * 100) / 100.0 : 0);
 
         kpis.put("orders", orders);
         kpis.put("warehouse", warehouse);
@@ -87,36 +80,18 @@ public class DashboardController {
     @Operation(summary = "Get order metrics", description = "Order statistics and trends")
     @GetMapping("/metrics/orders")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderMetrics() {
-        List<?> allOrders = orderRepository.findAll();
-        long total = allOrders.size();
-        long pending = allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.PENDING)
-            .count();
+        List<Order> allOrders = orderRepository.findAll();
 
         Map<String, Object> metrics = new HashMap<>();
-        metrics.put("total", total);
-        metrics.put("pending", pending);
-        metrics.put("created", allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.CREATED)
-            .count());
-        metrics.put("confirmed", allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.CONFIRMED)
-            .count());
-        metrics.put("picking", allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.PICKING)
-            .count());
-        metrics.put("packed", allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.PACKED)
-            .count());
-        metrics.put("shipped", allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.SHIPPED)
-            .count());
-        metrics.put("delivered", allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.DELIVERED)
-            .count());
-        metrics.put("cancelled", allOrders.stream()
-            .filter(o -> ((Order) o).getStatus() == OrderStatus.CANCELLED)
-            .count());
+        metrics.put("total", allOrders.size());
+        metrics.put("created", allOrders.stream().filter(o -> o.getStatus() == OrderStatus.CREATED).count());
+        metrics.put("confirmed", allOrders.stream().filter(o -> o.getStatus() == OrderStatus.CONFIRMED).count());
+        metrics.put("pending", allOrders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count());
+        metrics.put("picking", allOrders.stream().filter(o -> o.getStatus() == OrderStatus.PICKING).count());
+        metrics.put("packed", allOrders.stream().filter(o -> o.getStatus() == OrderStatus.PACKED).count());
+        metrics.put("shipped", allOrders.stream().filter(o -> o.getStatus() == OrderStatus.SHIPPED).count());
+        metrics.put("delivered", allOrders.stream().filter(o -> o.getStatus() == OrderStatus.DELIVERED).count());
+        metrics.put("cancelled", allOrders.stream().filter(o -> o.getStatus() == OrderStatus.CANCELLED).count());
 
         return ResponseEntity.ok(ApiResponse.success(metrics));
     }
@@ -124,18 +99,16 @@ public class DashboardController {
     @Operation(summary = "Get warehouse metrics", description = "Warehouse utilization")
     @GetMapping("/metrics/warehouse")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getWarehouseMetrics() {
-        List<?> allLocations = locationRepository.findAll();
+        List<Location> allLocations = locationRepository.findAll();
         long total = allLocations.size();
         long used = allLocations.stream()
-            .filter(l -> ((Location) l).getCurrentQuantity() != null && ((Location) l).getCurrentQuantity() > 0)
+            .filter(l -> l.getCurrentQuantity() != null && l.getCurrentQuantity() > 0)
             .count();
 
         Map<String, Object> metrics = new HashMap<>();
         metrics.put("totalLocations", total);
         metrics.put("usedLocations", used);
         metrics.put("availableLocations", total - used);
-        metrics.put("utilizationRate", total > 0 ?
-            Math.round((double) used / total * 100 * 100) / 100.0 : 0);
 
         return ResponseEntity.ok(ApiResponse.success(metrics));
     }
@@ -143,15 +116,10 @@ public class DashboardController {
     @Operation(summary = "Get recent activity", description = "Today's activity feed")
     @GetMapping("/activity")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getActivity() {
-        // Get recent orders as activity
-        List<?> recentOrders = orderRepository.findAll();
-
-        // Get last 10 orders (simplified - should be ordered by date)
-        List<?> lastOrders = recentOrders.size() > 10 ? recentOrders.subList(0, 10) : recentOrders;
+        List<Order> recentOrders = orderRepository.findAll();
 
         Map<String, Object> activity = new HashMap<>();
         activity.put("totalEvents", recentOrders.size());
-        activity.put("recentOrders", lastOrders.size());
         activity.put("timestamp", LocalDateTime.now());
 
         return ResponseEntity.ok(ApiResponse.success(activity));
