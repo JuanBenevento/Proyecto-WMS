@@ -40,7 +40,7 @@ public class OrderPersistenceAdapter implements OrderRepositoryPort {
                 .map(mapper::toOrderDomain);
     }
 
-@Override
+    @Override
     public List<Order> findByCustomerId(String customerId) {
         return jpaRepository.findByCustomerIdWithLines(customerId)
                 .stream()
@@ -65,31 +65,6 @@ public class OrderPersistenceAdapter implements OrderRepositoryPort {
     }
 
     @Override
-    public List<Order> findAll() {
-        return jpaRepository.findAllWithLines()
-                .stream()
-                .map(mapper::toOrderDomain)
-                .collect(Collectors.toList());
-    }
-}
-
-    @Override
-    public List<Order> findByWarehouseId(String warehouseId) {
-        return jpaRepository.findByWarehouseId(warehouseId)
-                .stream()
-                .map(mapper::toOrderDomain)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<Order> findByStatus(OrderStatus status) {
-        return jpaRepository.findByStatus(status)
-                .stream()
-                .map(mapper::toOrderDomain)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     public List<Order> findByWarehouseIdAndStatus(String warehouseId, OrderStatus status) {
         return jpaRepository.findByWarehouseIdAndStatusWithLines(warehouseId, status)
                 .stream()
@@ -99,7 +74,7 @@ public class OrderPersistenceAdapter implements OrderRepositoryPort {
 
     @Override
     public List<Order> findAll() {
-        return jpaRepository.findAll()
+        return jpaRepository.findAllWithLines()
                 .stream()
                 .map(mapper::toOrderDomain)
                 .collect(Collectors.toList());
