@@ -4,7 +4,7 @@ import com.juanbenevento.wms.orders.application.port.out.OrderRepositoryPort;
 import com.juanbenevento.wms.orders.domain.model.Order;
 import com.juanbenevento.wms.orders.domain.model.OrderStatus;
 import com.juanbenevento.wms.shared.infrastructure.rest.ApiResponse;
-import com.juanbenevento.wms.warehouse.application.port.in.LocationRepositoryPort;
+import com.juanbenevento.wms.warehouse.application.port.out.LocationRepositoryPort;
 import com.juanbenevento.wms.warehouse.domain.model.Location;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
