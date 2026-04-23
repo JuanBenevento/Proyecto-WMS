@@ -1,11 +1,14 @@
 name: WMS CI/CD Pipeline 🚀
 
-on:
-  push:
-    branches: [dev, main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+# DISABLED - Usar solo maven.yml para evitar conflictos
+# habilitar cuando este listo para produccion
+
+# on:
+#   push:
+#     branches: [dev, main]
+#   pull_request:
+#     branches: [main]
+#   workflow_dispatch:
 
 env:
   JAVA_VERSION: '21'
