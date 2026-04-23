@@ -86,7 +86,7 @@ public class WmsMetricsConfig {
                     .description("WMS operation timer: " + name)
                     .tag("operation", name)
                     .register(registry)
-            ).record(sample);
+            ).stop(sample);
         }
 
         /**
