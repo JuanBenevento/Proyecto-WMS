@@ -3,10 +3,10 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
-import { DashboardKpis, OrderMetrics, WarehouseMetrics, Activity } from '../domain/models/kpi.model';
-import { mapDashboardKpis, calculateUtilization, calculateCompletionRate } from '../infrastructure/mappers/dashboard.mapper';
-import { DashboardRepositoryAdapter } from '../infrastructure/adapters/dashboard.adapter';
+import { Observable } from 'rxjs';
+import { DashboardKpis } from '../../domain/models/kpi.model';
+import { calculateUtilization, calculateCompletionRate } from '../../infrastructure/mappers/dashboard.mapper';
+import { DashboardRepositoryAdapter } from '../../infrastructure/adapters/dashboard.adapter';
 
 @Injectable({
   providedIn: 'root'
