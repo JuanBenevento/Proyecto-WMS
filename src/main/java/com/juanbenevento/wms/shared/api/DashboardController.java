@@ -58,11 +58,11 @@ public class DashboardController {
         orders.put("inProgress", inProgressOrders);
         orders.put("completed", completedOrders);
 
-        // Warehouse KPIs
+        // Warehouse KPIs - use items list to determine usage
         List<Location> allLocations = locationRepository.findAll();
         long totalLocations = allLocations.size();
         long usedLocations = allLocations.stream()
-            .filter(l -> l.getCurrentQuantity() != null && l.getCurrentQuantity() > 0)
+            .filter(l -> l.getItems() != null && !l.getItems().isEmpty())
             .count();
 
         Map<String, Object> warehouse = new HashMap<>();
@@ -102,7 +102,7 @@ public class DashboardController {
         List<Location> allLocations = locationRepository.findAll();
         long total = allLocations.size();
         long used = allLocations.stream()
-            .filter(l -> l.getCurrentQuantity() != null && l.getCurrentQuantity() > 0)
+            .filter(l -> l.getItems() != null && !l.getItems().isEmpty())
             .count();
 
         Map<String, Object> metrics = new HashMap<>();
