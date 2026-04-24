@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Disabled("Requires Docker for Testcontainers - run with mvn test -Pci")
 class TenantIsolationIntegrationTest {
 
     @Container

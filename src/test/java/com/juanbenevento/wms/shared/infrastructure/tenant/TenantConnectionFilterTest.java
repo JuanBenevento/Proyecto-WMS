@@ -66,8 +66,8 @@ class TenantConnectionFilterTest {
             tenantConnectionFilter.doFilterInternal(request, response, filterChain);
 
             // THEN
-            verify(jdbcTemplate).execute("SET search_path TO tenant_test_tenant");
-            verify(jdbcTemplate).execute("RESET search_path");
+            verify(jdbcTemplate).execute("SET search_path TO tenant_test_tenant, public");
+            verify(jdbcTemplate).execute("SET search_path TO public");
             verify(filterChain).doFilter(request, response);
         }
 
@@ -83,9 +83,9 @@ class TenantConnectionFilterTest {
 
             // THEN - Verify order: SET -> doFilter -> RESET
             var inOrder = inOrder(jdbcTemplate, filterChain);
-            inOrder.verify(jdbcTemplate).execute("SET search_path TO tenant_acme_corp");
+            inOrder.verify(jdbcTemplate).execute("SET search_path TO tenant_acme_corp, public");
             inOrder.verify(filterChain).doFilter(request, response);
-            inOrder.verify(jdbcTemplate).execute("RESET search_path");
+            inOrder.verify(jdbcTemplate).execute("SET search_path TO public");
         }
 
         @Test
@@ -98,7 +98,7 @@ class TenantConnectionFilterTest {
             tenantConnectionFilter.doFilterInternal(request, response, filterChain);
 
             // THEN
-            verify(jdbcTemplate).execute("SET search_path TO tenant_acme_corp");
+            verify(jdbcTemplate).execute("SET search_path TO tenant_acme_corp, public");
         }
     }
 
@@ -149,7 +149,7 @@ class TenantConnectionFilterTest {
             tenantConnectionFilter.doFilterInternal(request, response, filterChain);
 
             // THEN - RESET debe ejecutarse siempre
-            verify(jdbcTemplate, atLeastOnce()).execute("RESET search_path");
+            verify(jdbcTemplate, atLeastOnce()).execute("SET search_path TO public");
         }
 
         @Test
@@ -167,8 +167,9 @@ class TenantConnectionFilterTest {
                 // Se espera la excepción
             }
 
-            // THEN - RESET debe ejecutarse a pesar de la excepción
-            verify(jdbcTemplate).execute("RESET search_path");
+            // THEN - SET search_path TO public debe ejecutarse al menos 2 veces:
+// 1. En catch (fallback) y 2. En finally (cleanup)
+            verify(jdbcTemplate, atLeast(2)).execute("SET search_path TO public");
         }
     }
 }
