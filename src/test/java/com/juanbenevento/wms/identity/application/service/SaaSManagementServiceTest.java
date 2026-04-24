@@ -8,6 +8,7 @@ import com.juanbenevento.wms.shared.domain.exception.DomainException;
 import com.juanbenevento.wms.identity.domain.exception.TenantAlreadyExistsException;
 import com.juanbenevento.wms.identity.domain.model.Tenant;
 import com.juanbenevento.wms.identity.domain.model.TenantStatus;
+import com.juanbenevento.wms.shared.infrastructure.tenant.TenantSchemaManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +32,7 @@ class SaaSManagementServiceTest {
     @Mock private UserRepositoryPort userRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantMapper mapper;
+    @Mock private TenantSchemaManager schemaManager;
 
     @InjectMocks
     private SaaSManagementService saasService;
@@ -45,6 +47,7 @@ class SaaSManagementServiceTest {
         when(tenantRepository.existsById("COCA")).thenReturn(false);
         when(userRepository.existsByUsername("admin_coca")).thenReturn(false);
         when(passwordEncoder.encode("secret123")).thenReturn("HASH_SECRETO");
+        when(schemaManager.createSchema("COCA")).thenReturn("tenant_coca");
 
         // WHEN
         saasService.onboardNewCustomer(command);

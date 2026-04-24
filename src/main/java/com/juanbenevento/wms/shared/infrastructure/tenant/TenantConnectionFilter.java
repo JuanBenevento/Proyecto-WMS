@@ -73,24 +73,35 @@ public class TenantConnectionFilter extends OncePerRequestFilter {
         String schemaName = buildSchemaName(tenantId);
         
         try {
-            // Set search_path to tenant schema
-            log.debug("Setting search_path to '{}' for tenant '{}'", schemaName, tenantId);
-            jdbcTemplate.execute("SET search_path TO " + schemaName);
+            // Set search_path to tenant schema FIRST, then public as fallback
+            // This way: queries find tables in tenant_xxx if they exist, otherwise in public
+            log.debug("Setting search_path to '{}, public' for tenant '{}'", schemaName, tenantId);
+            jdbcTemplate.execute("SET search_path TO " + schemaName + ", public");
             
             // Proceed with the request
             filterChain.doFilter(request, response);
             
+        } catch (Exception e) {
+            // Schema doesn't exist or other DB error - fallback to public only
+            log.warn("Could not set tenant schema '{}': {}. Using public schema only.", 
+                    schemaName, e.getMessage());
+            
+            // Fallback: only public schema
+            jdbcTemplate.execute("SET search_path TO public");
+            
+            // Continue with public schema - queries will work
+            filterChain.doFilter(request, response);
+            
         } finally {
             // Clean up search_path to prevent tenant leakage
-            // This ensures connection is clean for next tenant
-            log.trace("Resetting search_path after request");
-            jdbcTemplate.execute("RESET search_path");
+            // Explicitly reset to public (not RESET which uses postgresql.conf default)
+            log.trace("Resetting search_path to public after request");
+            try {
+                jdbcTemplate.execute("SET search_path TO public");
+            } catch (Exception e) {
+                log.trace("Error resetting search_path: {}", e.getMessage());
+            }
         }
-    }
-    
-    @Override
-    public int getFilterOrder() {
-        return FILTER_ORDER;
     }
     
     /**

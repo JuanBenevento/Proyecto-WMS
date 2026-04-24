@@ -81,12 +81,13 @@ public class WmsMetricsConfig {
          * Stop timer and record duration.
          */
         public void stopTimer(String name, Timer.Sample sample) {
-            timers.computeIfAbsent(name, k ->
+            Timer timer = timers.computeIfAbsent(name, k ->
                 Timer.builder("wms." + name)
                     .description("WMS operation timer: " + name)
                     .tag("operation", name)
                     .register(registry)
-            ).record(sample);
+            );
+            sample.stop(timer);
         }
 
         /**
