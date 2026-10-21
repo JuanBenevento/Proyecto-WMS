@@ -77,8 +77,8 @@
 | ID | Spec | Ruta | Commit |
 |----|------|------|--------|
 | T1 | S6 | baseline | `pendiente` — ✅ COMPLETADO 2026-10-21: `.\mvnw.cmd clean verify` → **307 tests, 0 failures, 0 errors, 5 skipped, BUILD SUCCESS (2:03 min)**. Ver L6. |
-| T2 | S8 | inline | (pendiente) — Unificar guard Docker: registrar `@ExtendWith(RequiresDockerExtension.class)` (o meta-anotar `@RequiresDocker`), eliminar la copia muerta |
-| T3 | S1, S2, S5 | inline | (pendiente) — Rediseñar `TenantConnectionFilter` + interceptor: search_path por checkout/conexión real, fail-closed sin fallback a `public` |
+| T2 | S8 | inline | ✅ `2c6f33c..` — Unificado: `@RequiresDocker` ahora meta-anota `@ExtendWith(RequiresDockerCondition.class)`; condición simplificada; `RequiresDockerExtension.java` eliminada. Test-first: `RequiresDockerGuardTest` RED→GREEN (2 tests). |
+| T3 | S1, S2, S5 | inline | ✅ — `TenantAwareDataSource` (search_path en checkout de la conexión real, fail-closed con `TenantSchemaMissingException`, whitelist `^[a-z][a-z0-9_]{0,62}$` contra inyección de identificadores). `TenantDataSourceConfiguration` (BeanPostProcessor envuelve HikariDataSource; flag `wms.tenant.isolation.enabled` default true). Eliminados: `TenantConnectionFilter` + test (mecanismo roto) y `SearchPathConnectionInterceptor` (placeholder — S5 resuelto por eliminación). Test-first: `TenantAwareDataSourceIntegrationTest` RED (3F+1E) → GREEN (7/7). Suite full: 309/0/0/5-skipped BUILD SUCCESS. |
 | T4 | S3, S4 | inline | (pendiente) — Cablear flags `wms.tenant.isolation.enabled` / `.rls.enabled` y reescribir `TenantIsolationHealthIndicator` |
 | T5 | S6, S7 | inline | (pendiente) — Corregir migraciones Flyway: tablas de app completas, versión RLS válida o remoción decidida |
 | T6 | S9, S1, S2 | inline | (pendiente) — Reactivar `TenantIsolationIntegrationTest` + test fail-closed nuevo; RED→GREEN→REFACTOR |
