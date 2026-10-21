@@ -162,6 +162,18 @@ class TenantAwareDataSourceIntegrationTest {
     }
 
     @Test
+    @DisplayName("S3: isolationEnabled=false → passthrough explícito, sin fail-closed")
+    void isolationDisabled_passesThroughWithoutFailClosed() throws SQLException {
+        TenantAwareDataSource passthrough = new TenantAwareDataSource(hikari, false);
+
+        TenantContext.setTenantId("ghost");
+        try (Connection conn = passthrough.getConnection()) {
+            assertTrue(currentSearchPath(conn).contains("public"),
+                    "Con flag off el comportamiento es passthrough sobre public");
+        }
+    }
+
+    @Test
     @DisplayName("S1: tenant SYSTEM después de un tenant no hereda su search_path")
     void systemAfterTenant_doesNotInheritSearchPath() throws SQLException {
         createSchemaDirectly("tenant_alpha");
