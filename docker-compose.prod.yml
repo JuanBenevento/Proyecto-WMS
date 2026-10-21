@@ -82,7 +82,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       # Use HikariCP connection pool for production
       SPRING_DATASOURCE_HIKARI_MAXIMUM-POOL-SIZE: "20"
-      SPRING_DATASOURCE_HIKARI_MINIMUM-IDELE: "5"
+      SPRING_DATASOURCE_HIKARI_MINIMUM-IDLE: "5"
       SPRING_DATASOURCE_HIKARI_CONNECTION-TIMEOUT: "30000"
       SPRING_DATASOURCE_HIKARI_IDLE-TIMEOUT: "600000"
       SPRING_DATASOURCE_HIKARI_MAX-LIFETIME: "1800000"
@@ -93,6 +93,7 @@ services:
       # Flyway - migrations enabled in prod
       SPRING_FLYWAY_ENABLED: "true"
       # Security
+      # REQUIERE Base64 válido de >=32 bytes (lo valida JwtService al arrancar). Sin default: prod debe inyectarlo.
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_EXPIRATION: "${JWT_EXPIRATION:-86400000}"
       # Server - production settings
@@ -103,13 +104,12 @@ services:
       MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS: "when_authorized"
       # Multi-tenant - ENABLE in production
       WMS_TENANT_ISOLATION_ENABLED: "${WMS_TENANT_ISOLATION_ENABLED:-true}"
-      WMS_TENANT_RLS_ENABLED: "${WMS_TENANT_RLS_ENABLED:-true}"
       # Logging - JSON for ELK
       LOGGING_FORMAT: "${LOGGING_FORMAT:-json}"
       # Resilience
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_REGISTERFORCIRCUITBREAKER_EXceptions: "true"
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_SLIDINGWINDOW-SIZE: "10"
-      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_PERMITTEDNUMBEROF CALLSINHALFOPENSTATE: "3"
+      RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_PERMITTED_NUMBER_OF_CALLS_IN_HALF_OPEN_STATE: "3"
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_WAITDURATIONINOPENSTATE: "60s"
       RESILIENCE4J_CIRCUITBREAKER_INSTANCES_BACKEND_FAILURERATETHRESHOLD: "50"
     ports:
@@ -118,7 +118,8 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      # wget (busybox) porque la imagen runtime alpine NO trae curl
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -146,7 +147,9 @@ services:
     depends_on:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1"]
+      # 127.0.0.1 en vez de localhost: busybox wget resuelve ::1 (IPv6) primero
+      # y nginx solo escucha en IPv4 -> "Connection refused" permanente.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
