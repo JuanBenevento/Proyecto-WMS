@@ -1,83 +1,115 @@
-# 📋 Especificación de Requerimientos Funcionales (WMS)
+# Requerimientos Funcionales — WMS
 
-## 1. Backlog del Producto (Épicas y Historias de Usuario)
+> **Backlog del producto con estado real de implementación** (verificado el 2026-10-21 contra
+> el código). Las historias describen el producto deseado; cada una lleva su estado honesto.
+> Contexto global: [`docs/CURRENT_STATE.md`](CURRENT_STATE.md).
 
-Este documento detalla el comportamiento funcional esperado del sistema.
-
-### ÉPICA 1: Gestión de Maestros y Topología (Master Data)
-Definición de las reglas físicas y lógicas del almacén.
-
-#### 📝 US-MD-01: Alta de Producto con Perfil Logístico
-**Como** Gerente de Inventario,
-**Quiero** registrar nuevos productos definiendo sus dimensiones, peso y restricciones de almacenamiento,
-**Para** que el sistema pueda calcular automáticamente dónde guardarlos.
-
-* **Criterio de Aceptación 1:** El sistema debe obligar a ingresar Alto, Ancho, Profundidad y Peso.
-* **Criterio de Aceptación 2:** Si el peso > 20kg, marcar flag `heavy_load` automáticamente.
-* **Criterio de Aceptación 3:** Se debe seleccionar un `StorageCondition` (Seco, Refrigerado, Congelado, Químicos).
-
-#### 📝 US-MD-02: Configuración del Layout del Almacén
-**Como** Administrador,
-**Quiero** crear ubicaciones jerárquicas (Zona > Pasillo > Rack > Nivel > Posición),
-**Para** mapear digitalmente el almacén físico.
-
-* **Criterio de Aceptación 1:** Cada ubicación debe tener un código único (ej: `Z1-P03-R02-N4`).
-* **Criterio de Aceptación 2:** Validación de capacidad máxima (Volumen y Peso).
+**Leyenda de estados:** ✅ implementado y verificado · 🟡 parcial (limitaciones listadas) ·
+🔴 no implementado (historia = roadmap)
 
 ---
 
-### ÉPICA 2: Inbound (Recepción y Entrada)
-Proceso de entrada de stock al almacén.
+## Épica 1: Master Data
 
-#### 📝 US-IN-01: Recepción Ciega y Generación de LPN
-**Como** Operario de Recepción,
-**Quiero** ingresar la mercancía generando un código de contenedor único (LPN),
-**Para** mover pallets enteros sin manipular cajas individuales.
+### US-MD-01: Alta de producto con perfil logístico — 🟡
 
-* **Criterio de Aceptación 1:** Generación automática de ID único LPN (ej: `LPN-2024-00055`).
-* **Criterio de Aceptación 2:** Captura obligatoria de Lote (`batch_number`) y Vencimiento.
-* **Criterio de Aceptación 3:** Estado inicial del stock: `IN_QUALITY_CHECK` (No disponible para venta).
+**Como** gerente de inventario, **quiero** registrar productos con dimensiones, peso y
+restricciones, **para** que el sistema sugiera dónde guardarlos.
 
-#### 📝 US-IN-02: Put-Away Dirigido (Estrategia de Ubicación)
-**Como** Operario,
-**Quiero** que el sistema me indique la ubicación óptima para guardar el pallet,
-**Para** optimizar el espacio y respetar la cadena de frío.
+- **CA1 (alto/ancho/profundidad/peso obligatorios):** ✅ `Product` tiene `Dimensions` con
+  validación en `validateState()` (`catalog/domain/model/Product.java`).
+- **CA2 (flag automático si peso > 20kg):** ✅ como **cálculo**, no como flag persistido:
+  `Product.isHeavyLoad()` delega en `Dimensions.isHeavyLoad()`
+  (`catalog/domain/model/Product.java:55`).
+- **CA3 (selección de `StorageCondition` en el producto):** 🔴 no existe tal campo. Está
+  **superseded** por la derivación de zona en el put-away: `SmartPutAwayStrategy.determineZone()`
+  mapea producto → `ZoneType` (DRY/COLD/FROZEN/HAZMAT).
 
-* **Criterio de Aceptación 1:** Sugerencia basada en compatibilidad de Zona (Frío con Frío).
-* **Criterio de Aceptación 2:** Validación de capacidad física disponible.
-* **Criterio de Aceptación 3:** Prioridad a ubicaciones que ya contengan el mismo SKU (consolidación).
+### US-MD-02: Layout jerárquico del almacén — ✅
 
----
+**Como** administrador, **quiero** ubicaciones jerárquicas con capacidad, **para** mapear el
+almacén físico.
 
-### ÉPICA 3: Outbound (Pedidos y Salida)
-Gestión de pedidos y despacho.
-
-#### 📝 US-OUT-01: Asignación de Stock (Hard Allocation)
-**Como** Sistema,
-**Quiero** reservar stock automáticamente al confirmar una orden,
-**Para** evitar la sobreventa.
-
-* **Criterio de Aceptación 1 (FEFO):** Asignar automáticamente el lote más próximo a vencer.
-* **Criterio de Aceptación 2:** Cambio de estado de `AVAILABLE` a `ALLOCATED`.
-* **Criterio de Aceptación 3:** Manejo de concurrencia (bloqueo optimista) para evitar asignar el mismo ítem a dos pedidos.
-
-#### 📝 US-OUT-02: Picking con Validación
-**Como** Picker,
-**Quiero** escanear ubicación y producto antes de confirmar la recolección,
-**Para** asegurar la exactitud del pedido.
-
-* **Criterio de Aceptación 1:** Bloqueo si la ubicación escaneada no coincide con la tarea.
-* **Criterio de Aceptación 2:** Bloqueo si el SKU escaneado es incorrecto.
+- ✅ `Location` tiene `locationCode`, `aisle`, `column`, `level`, `zoneType`,
+  `maxWeight`/`maxVolume` y `hasSpaceFor(...)` (`warehouse/domain/model/Location.java`).
+- El vocabulario del código (`aisle/column/level`) difiere del "Pasillo > Rack > Nivel" de
+  historias viejas; el código es la referencia.
+- Zonas disponibles (`ZoneType`): DRY_STORAGE, COLD_STORAGE, FROZEN_STORAGE, HAZMAT,
+  RECEIVING_AREA, PICKING_AREA, DISPATCH_AREA, DOCK_DOOR, YARD, QUARANTINE.
 
 ---
 
-### ÉPICA 4: Auditoría y Trazabilidad
-Seguimiento de movimientos.
+## Épica 2: Inbound
 
-#### 📝 US-CORE-01: Kardex de Movimientos
-**Como** Auditor,
-**Quiero** consultar el historial completo de un LPN,
-**Para** trazar quién lo movió y cuándo.
+### US-IN-01: Recepción y generación de LPN — ✅
 
-* **Criterio de Aceptación 1:** Registro inmutable (Log) de cada cambio de estado.
-* **Criterio de Aceptación 2:** Datos obligatorios: Timestamp, Usuario, Motivo, Ubicación Anterior, Ubicación Nueva.
+**Como** operario de recepción, **quiero** generar un LPN con lote y vencimiento, **para**
+mover pallets enteros.
+
+- ✅ LPN como VO con validación y generación (`Lpn.java`; formato real `LPN-XXXXXXXX` —
+  el ejemplo viejo `LPN-2024-00055` no corresponde al VO).
+- ✅ `InventoryItem` persiste `lpn`, `batchNumber`, `expiryDate`
+  (`inventory/domain/model/InventoryItem.java`).
+- ✅ Estado inicial `IN_QUALITY_CHECK` existe en el enum de estado.
+
+### US-IN-02: Put-away dirigido — 🟡
+
+**Como** operario, **quiero** que el sistema sugiera la ubicación óptima, **para** optimizar
+espacio y respetar cadena de frío.
+
+- ✅ CA1 (compatibilidad de zona): `SmartPutAwayStrategy.determineZone(Product)` deriva
+  FROZEN / COLD / HAZMAT / DRY según el producto; usado por
+  `warehouse/application/service/LocationSuggestionService.java`.
+- 🟡 CA2 (validación de capacidad física) y CA3 (consolidación por mismo SKU): existe lógica
+  de capacidad a nivel entidad (`Location.hasSpaceFor`), pero el flujo completo
+  sugerencia→reserva **no está verificado hoy** de punta a punta.
+
+---
+
+## Épica 3: Outbound
+
+### US-OUT-01: Asignación de stock (hard allocation) al confirmar — ✅
+
+**Como** sistema, **quiero** reservar stock al confirmar la orden, **para** evitar sobreventa.
+
+- ✅ CA1 (FEFO): la asignación FEFO está implementada (código FEFO presente en el flujo de
+  inventario; `expiryDate` en `InventoryItem` es el criterio de vencimiento).
+- ✅ CA2 (AVAILABLE → ALLOCATED): estados presentes y ejercitados por la suite de workflows
+  (`OrderInventoryIntegrationTest`, verde el 2026-10-21).
+- ✅ CA3 (concurrencia): bloqueo optimista con `@Version` (3 entidades lo usan).
+
+### US-OUT-02: Picking con validación de escaneo — 🟡
+
+**Como** picker, **quiero** escanear ubicación y producto antes de confirmar, **para**
+asegurar exactitud.
+
+- 🟡 El flujo de picking existe (`inventory/application/service/PickingService.java`,
+  workflows probados), **pero**: las sesiones viven en `ConcurrentHashMap` (se pierden al
+  reiniciar) y la validación estricta de escaneo (bloqueo por ubicación/SKU incorrecto)
+  **no está verificada hoy** con evidencia de test dedicado.
+
+---
+
+## Épica 4: Auditoría y trazabilidad
+
+### US-CORE-01: Kardex de movimientos inmutable — 🟡
+
+**Como** auditor, **quiero** consultar el historial de un LPN, **para** trazar quién lo movió.
+
+- 🟡 Existen el módulo `audit` y `AuditController` (`/api/v1/audit`), con eventos de dominio
+  publicados por un bridge `@Async` **en el mismo proceso**. Limitaciones reales:
+  - consistencia **eventual** (no transaccional);
+  - la persistencia de eventos tiene 1 test `@Disabled` (evento de orden cancelada);
+  - lotes y movimientos aún no persisten en BD (ver `CURRENT_STATE.md` §5) → el kardex
+    completo de esos movimientos no existe todavía.
+
+---
+
+## Historias sin implementar (roadmap, no backlog activo)
+
+Estas aparicion en documentos históricos como "completadas" — **no lo están**:
+
+- 🔴 Recepción ciega con UI de escáner.
+- 🔴 UI de cold-chain (`/api/v1/monitoring/*` sin Angular; datos en memoria).
+- 🔴 Idempotencia de API end-to-end (test `@Disabled` por hang).
+- 🔴 Migración de datos existentes a schemas multi-tenant en producción.
