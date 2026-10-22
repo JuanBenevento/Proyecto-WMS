@@ -32,18 +32,22 @@ Leyenda: **COMPLETE** = persiste y tiene evidencia de ejecución · **PARTIAL** 
 limitaciones documentadas · **SCAFFOLD** = código existe pero no persiste / estado en memoria ·
 **BROKEN** = no funciona · **no verificado** = no se ejecutó hoy.
 
+**Paquetes top-level (verificado 2026-10-21, `Get-ChildItem -Directory src\main\java\com\juanbenevento\wms`)**:
+`audit`, `catalog`, `identity`, `inventory`, `monitoring`, `orders`, `shared`, `warehouse`.
+`picking`, `dashboard` y `super-admin` **no** son paquetes top-level (viven dentro de `inventory`, `shared` e `identity` respectivamente).
+
 | Módulo (`src/main/java/com/juanbenevento/wms/<x>`) | Madurez | Evidencia |
 |----------------------------------------------------|---------|-----------|
 | `identity` (usuarios/auth) | COMPLETE | Login en vivo 2026-10-21: `POST /api/v1/auth/login` → 200 + JWT; usuarios reales en BD: psql → `superadmin/SUPER_ADMIN`; seed idempotente `shared/infrastructure/config/DataInitializer.java` |
 | `catalog` (productos) | COMPLETE | Products persiste en JPA (tabla `products` creada por `db/migration/V2__application_tables.sql`, generada del metamodelo Hibernate); endpoint consultado en E2E `TenantFailClosedEndToEndTest` |
 | `orders` (órdenes) | PARTIAL | Flujos de estado probados (`OrderInventoryIntegrationTest`, `PickingWorkflowIntegrationTest` en suite verde 2026-10-21); **evento `OrderCancelled`**: test `EventPersistenceIntegrationTest:192` sigue `@Disabled` |
 | `inventory` (stock + lotes/movimientos) | PARTIAL | Persistencia de stock real: `InventoryPersistenceAdapter` (JPA, Spring Data) — suite verde. **PERO** lotes y movimientos NO persisten: `LotJpaAdapter` y `MovementJpaAdapter` son `HashMap` pese al nombre "Jpa" (análisis #611 §5, verificado en código) → **feature B** |
-| `picking` | PARTIAL | Lógica completa (`PickingService`, sesiones de picking en `ConcurrentHashMap`) → estado **en memoria**, se pierde al reiniciar (análisis #611 §5) |
-| `monitoring` (cadena de frío) | SCAFFOLD | `ColdChainMonitorService` usa `ConcurrentHashMap` (datos en memoria, no multi-tenant-safe); sin UI Angular para `/api/v1/monitoring/*` (análisis #611 §6) |
-| `dashboard` | PARTIAL | Módulo backend + visualizaciones KPI (commits `427bd59`, `87b1e0e`); **no verificado hoy** su cobertura de datos reales |
+| `picking` (subdomain dentro de `inventory`) | PARTIAL | `inventory/application/service/PickingService.java` — lógica completa pero sesiones en `ConcurrentHashMap` → estado **en memoria**, se pierde al reiniciar (análisis #611 §5); controller `inventory/infrastructure/in/rest/PickingController.java` |
+| `monitoring` (cadena de frío) | SCAFFOLD | `monitoring/application/service/ColdChainMonitorService.java` usa `ConcurrentHashMap` (datos en memoria, no multi-tenant-safe); sin UI Angular para `/api/v1/monitoring/*` (análisis #611 §6) |
+| `dashboard` (en `shared/api`) | PARTIAL | `shared/api/DashboardController.java` + visualizaciones KPI (commits `427bd59`, `87b1e0e`); **no verificado hoy** su cobertura de datos reales |
 | `audit` | PARTIAL | Eventos vía `InventoryEventBridge` `@Async` con `ContextAwareTaskDecorator` → **eventualmente consistente** (análisis #611 §6) |
 | `warehouse` | no verificado | Paquete existe; no se ejecutó hoy |
-| `super-admin` | no verificado | Paquete existe; onboarding de tenants vía `TenantSchemaManager` (`SaaSManagementService`) — no verificado hoy |
+| `super-admin` (en `identity`: `SaaSController`) | no verificado | Onboarding de tenants vía `shared/infrastructure/tenant/TenantSchemaManager.java` — no verificado hoy |
 | `shared/infrastructure/tenant` (aislamiento) | COMPLETE | **Cerrado por la feature A** (merge `813be57`, 2026-10-21): wrapper en cada checkout de conexión, fail-closed, health indicator honesto. Evidencia: suite 317/0/0/2 + `/actuator/health` → `tenantIsolation: UP (schema-based fail-closed)` verificado en vivo 2026-10-21 |
 | Frontend Angular | PARTIAL | 133 archivos `.ts`, solo **2** `*.spec.ts` (comando: `Get-ChildItem -Recurse wms-frontend\src -Filter *.spec.ts` → 2); sin UI para cold-chain/lotes/idempotencia |
 | E2E Playwright | PARTIAL | 7 specs en `e2e/` (4 API + 3 UI) pero `e2e/node_modules` **ausente** → no ejecutables sin `npm install` (verificado 2026-10-21) |
@@ -84,7 +88,7 @@ Tests run: 317, Failures: 0, Errors: 0, Skipped: 2 — BUILD SUCCESS (2:20 min)
 
 ## 5. Riesgos abiertos (ordenados por impacto)
 
-1. **Persistencia en memoria (lotes, movimientos, picking, cold-chain)** — datos se pierden al reiniciar y no son multi-tenant-safe. Camino: feature B. Evidencia: `LotJpaAdapter`, `MovementJpaAdapter` (HashMap), `PickingService` (ConcurrentHashMap), `ColdChainMonitorService`.
+1. **Persistencia en memoria (lotes, movimientos, picking, cold-chain)** — datos se pierden al reiniciar y no son multi-tenant-safe. Camino: feature B. Evidencia: `inventory/infrastructure/out/persistence/LotJpaAdapter.java` y `MovementJpaAdapter.java` (HashMap pese al nombre "Jpa"), `inventory/application/service/PickingService.java` (ConcurrentHashMap), `monitoring/application/service/ColdChainMonitorService.java`.
 2. **Sin medición de cobertura** — JaCoCo ausente del `pom.xml`; ningún % de cobertura es citable.
 3. **k8s/prod no desplegable** — sin templates Helm, mismatch de imagen, ingress a Service inexistente, secrets placeholder `changeme` versionados en `k8s/values.yaml`.
 4. **`docker-compose.prod.yml` roto** — archivo de monitoring inexistente + env vars Resilience4j mal formadas.
