@@ -30,6 +30,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Liveness para healthchecks de Docker/K8s. En prod,
+                        // MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=when_authorized
+                        // limita lo anónimo a {"status": "..."} sin componentes.
+                        .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )

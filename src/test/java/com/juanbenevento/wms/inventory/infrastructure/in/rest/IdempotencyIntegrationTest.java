@@ -27,15 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Usa Testcontainers para PostgreSQL real.
  */
 @SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "application.security.jwt.secret-key=${TEST_JWT_SECRET:una-clave-super-secreta-para-entornos-de-prueba-muy-larga-123456789}",
-                "application.security.jwt.expiration=86400000"
-        }
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
 )
 @Testcontainers
 @ActiveProfiles("test")
-@Disabled("Testcontainers context loading conflict - needs separate investigation")
+@Disabled("Test hangs - needs separate investigation")
 class IdempotencyIntegrationTest {
 
     @Container

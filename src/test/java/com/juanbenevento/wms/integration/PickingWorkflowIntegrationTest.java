@@ -5,6 +5,7 @@ import com.juanbenevento.wms.orders.domain.model.Order;
 import com.juanbenevento.wms.orders.domain.model.OrderLine;
 import com.juanbenevento.wms.orders.domain.model.OrderStatus;
 import com.juanbenevento.wms.shared.infrastructure.tenant.TenantContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,6 +60,13 @@ class PickingWorkflowIntegrationTest {
     @BeforeEach
     void setUp() {
         TenantContext.setTenantId(TEST_TENANT_ID);
+    }
+
+    @AfterEach
+    void clearTenantContext() {
+        // Higiene de ThreadLocal: sin esto, "test-tenant-001" filtra al siguiente
+        // contexto Spring del mismo hilo y revienta el bootstrap con aislamiento ON
+        TenantContext.clear();
     }
 
     @Test
