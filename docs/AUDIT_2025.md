@@ -1,3 +1,6 @@
+> **DOCUMENTO HISTORICO** - superado por docs/CURRENT_STATE.md (2026-10-21). No usar como
+> referencia del estado actual del proyecto; ver docs/CURRENT_STATE.md.
+
 # Auditoría del Sistema WMS - Abril 2025
 
 ## 📊 Estado General del Proyecto
