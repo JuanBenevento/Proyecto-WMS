@@ -89,9 +89,9 @@ estrategias FEFO/FIFO/LotControl/WeightCertification.
 | TD2 | S4 | inline | `91ff8cb` — RED: `LotAndMovementPersistenceIntegrationTest` (falla: sin tabla/repos) |
 | TD3 | S1 | inline | `cf01949` — `V3__inventory_lots_and_movements.sql` (GREEN parcial: tablas existen) |
 | TD4 | S2+S3 | inline | `24fdb83` — Entidades, repos, mappers y adapters reales (GREEN: 6/6 tests) |
-| TD5 | S5 | inline | (pendiente) — Suite completa + aislamiento |
-| TD6 | S6 | inline | (pendiente) — Conciliación docs + openspec + corrección ADR-004 |
-| TD7 | — | inline | (pendiente) — Engram mirror + decisión push/PR del usuario |
+| TD5 | S5 | inline | (verificación sin commit) — Suite completa 323/0/0/2 + aislamiento intacto, 2026-10-23 |
+| TD6 | S6 | inline | `8fde461` — Conciliación docs + openspec + corrección ADR-004 |
+| TD7 | — | inline | (espejo Engram `odd/real-persistence/tasks` guardado, obs #621) — decisión push/PR del usuario PENDIENTE |
 
 ## Log
 
