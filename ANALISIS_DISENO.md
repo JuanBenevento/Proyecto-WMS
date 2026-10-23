@@ -1,3 +1,8 @@
+> ⚠️ **DOCUMENTO HISTÓRICO** — superado por `docs/CURRENT_STATE.md` (2026-10-21). Esta
+> autocalificación (8.5/10) y sus ejemplos de código reflejan el estado del proyecto en su
+> fecha de redacción; no usar como referencia actual. El estado verificado de hoy está en
+> `docs/CURRENT_STATE.md`.
+
 # 📊 Análisis de Principios y Patrones de Diseño
 ## Sistema WMS - Warehouse Management System
 

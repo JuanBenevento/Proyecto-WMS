@@ -1,3 +1,6 @@
+> **DOCUMENTO HISTORICO** - superado por docs/CURRENT_STATE.md (2026-10-21). No usar como
+> referencia del estado actual del proyecto; ver docs/CURRENT_STATE.md.
+
 # Plan #1: Base Sólida y Profesional
 
 ## metadata

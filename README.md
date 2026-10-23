@@ -1,4 +1,4 @@
-# 🏭 WMS Enterprise - Warehouse Management System
+# WMS Enterprise — Warehouse Management System
 
 <div align="center">
 
@@ -6,450 +6,249 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-green.svg)](https://spring.io/projects/spring-boot)
 [![Angular](https://img.shields.io/badge/Angular-20-red.svg)](https://angular.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Build](https://img.shields.io/badge/Build-Passing-green.svg)]()
 
-**Sistema de Gestión de Almacenes de nivel empresarial con arquitectura hexagonal y DDD**
+**Sistema de Gestión de Almacenes con arquitectura hexagonal y DDD**
+
+Estado real verificado: **[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md)** (última verificación: 2026-10-21)
 
 </div>
 
 ---
 
-## 📋 Descripción
+## Descripción
 
-WMS Enterprise es un sistema moderno y escalable para la gestión integral de almacenes. Diseñado bajo principios de **Domain-Driven Design (DDD)** y **Arquitectura Hexagonal**, ofrece automatización inteligente de procesos logísticos, trazabilidad total y capacidad de expansión para operaciones de alto volumen.
+WMS es un backend Spring Boot (Java 21) con frontend Angular para gestión de almacenes:
+catálogo de productos, ubicaciones, inventario, órdenes con flujo de estados
+(crear → confirmar → pick → pack → ship → deliver), picking, dashboard de KPIs,
+monitoreo de cadena de frío y aislamiento multi-tenant por schema (SaaS, fail-closed).
 
-### ✨ Características Principales
-
-- 📦 **Gestión de Inventario** - Control de stock con lotes, vencimientos y estados
-- 🚚 **Inbound/Outbound** - Recepción, put-away, picking y despacho automatizados
-- 📋 **Gestión de Órdenes** - Estados extensibles, prioridades, asignación FEFO
-- 🔍 **Trazabilidad Total** - Eventos de dominio persistidos para auditoría
-- 🔐 **Multi-tenant** - Arquitectura SaaS con aislamiento por empresa
-- 🏗️ **Arquitectura Empresarial** - Hexagonal + DDD + Event-Driven
-- 📊 **Dashboard KPIs** - Métricas en tiempo real
-- 🌡️ **Cold Chain** - Control de temperatura para industria alimentaria
-- 📈 **Escalabilidad** - Kubernetes, HPA, Helm charts
+> **Transparencia:** el sistema está en desarrollo activo. Hay módulos completos y módulos
+> parciales o en esqueleto (p. ej. lotes/movimientos y cold-chain aún no persisten en BD).
+> El estado por módulo con evidencia está en [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md);
+> no creas ningún README que diga "v1.0 completado" ni porcentajes de cobertura inventados.
 
 ---
 
-## 🏗️ Arquitectura
+## Quick Start (verificado 2026-10-21)
 
-### Stack Tecnológico
+### Requisitos
 
-| Capa | Tecnología |
-|------|-------------|
-| **Backend** | Java 21 LTS, Spring Boot 3.4 |
-| **Frontend** | Angular 20 |
-| **Database** | PostgreSQL 16 |
-| **Security** | JWT OAuth2 |
-| **Events** | In-Memory Event Bus |
+- Docker con Docker Compose (plugin v2: el comando es `docker compose`, con espacio)
 
-### Modelo Arquitectónico
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      FRONTEND (Angular 20)                │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        │
-│  │ Orders │ │Inventory│ │ Products│ │ Warehouse│        │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘        │
-└────────────────────────┬────────────────────────────────────┘
-                         │ REST API (JSON)
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   APPLICATION LAYER                        │
-│  Use Cases │ Services │ Commands │ DTOs │ Ports         │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      DOMAIN LAYER                          │
-│  Entities │ Value Objects │ Domain Events │ Rules        │
-└─────────────────────────────────────────────────────────────┘
-                         ▲
-                         │
-┌────────────────────────┴────────────────────────────────────┐
-│                  INFRASTRUCTURE LAYER                      │
-│  REST Adapters │ JPA Repositories │ Event Handlers       │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Docker** 20.10+ with Docker Compose
-- **8GB RAM** minimum (recommended 16GB)
-- **20GB disk space**
-
-### Option 1: Docker Compose (Recommended for Development)
-
-La forma más rápida de levantar todo el sistema:
+### Levantar todo
 
 ```bash
-# Clonar repositorio
 git clone https://github.com/JuanBenevento/Proyecto-WMS.git
 cd Proyecto-WMS
 
-# Levantar todos los servicios (PostgreSQL + Backend + Frontend)
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f
-
-# Ver estado de servicios
-docker-compose ps
+docker compose up -d        # PostgreSQL + Backend + Frontend
+docker compose ps           # los 3 servicios deben quedar "healthy"
 ```
-
-**Tiempo de primer arranque:** ~3-5 minutos (depende de descarga de imágenes)
 
 **Una vez levantado:**
 
 | Servicio | URL | Credenciales |
 |----------|-----|--------------|
-| Frontend | http://localhost:4200 | superadmin / admin123 |
-| API | http://localhost:8080/api/v1 | - |
-| Swagger | http://localhost:8080/swagger-ui.html | - |
-| Health | http://localhost:8080/actuator/health | - |
+| Frontend | http://localhost:4200 | `superadmin` / `root123` |
+| API | http://localhost:8080/api/v1 | — |
+| Swagger UI | http://localhost:8080/swagger-ui.html | — |
+| OpenAPI JSON | http://localhost:8080/v3/api-docs | — |
+| Health | http://localhost:8080/actuator/health | — |
+| PostgreSQL | localhost:5432 (db `wms_db`) | ver `docker-compose.yml` |
+
+**Login (probado el 2026-10-21 — el campo es `username`, no `email`):**
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"superadmin","password":"root123"}'
+# → 200 + JWT
+```
+
+> La única credencial sembrada es `superadmin/root123` (la crea `DataInitializer` al
+> arrancar, de forma idempotente). Documentos viejos que mencionan `admin123` están equivocados.
 
 **Detener:**
+
 ```bash
-docker-compose down                    # Detiene servicios
-docker-compose down -v               # Detiene Y elimina datos
+docker compose down        # detiene servicios (conserva datos)
+docker compose down -v     # detiene y ELIMINA los volúmenes de BD
 ```
 
 ---
 
-### Option 2: Manual Setup (Desarrollo Local)
+### Arranque manual (NO verificado de punta a punta — best effort)
 
-#### Prerequisites
+Si prefieres correr el backend sin Docker:
 
-- **Java** 21 LTS
-- **Maven** 3.9+
-- **Node.js** 20+
-- **PostgreSQL** 16+
-- **H2** (development/tests)
-
-#### Installation
+- Java 21 + `./mvnw` (o `mvnw.cmd` en Windows)
+- PostgreSQL 16 corriendo con database `wms_db`
+- Variable `DB_PASSWORD` **obligatoria** (no tiene default: `application.properties` usa `${DB_PASSWORD}`)
+- El datasource por defecto siempre es PostgreSQL (`jdbc:postgresql://localhost:5432/wms_db`).
+  H2 no es el datasource de desarrollo — el perfil `dev` solo desactiva el aislamiento
+  multi-tenant y aporta un JWT secret de desarrollo.
 
 ```bash
-# Clone repository
-git clone https://github.com/JuanBenevento/Proyecto-WMS.git
-cd Proyecto-WMS
-
-# Backend - Development (H2 in-memory)
+export DB_PASSWORD=...
 ./mvnw spring-boot:run
-
-# Backend - Production
-export DB_URL=jdbc:postgresql://localhost:5432/wms
-export DB_USERNAME=postgres
-export DB_PASSWORD=your_password
-export JWT_SECRET_KEY=your-secret-key
-./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
-
-# Frontend
-cd wms-frontend
-npm install
-npm start
 ```
 
-### Acceso
-
-| Servicio | URL | Credenciales default |
-|----------|-----|---------------------|
-| API REST | http://localhost:8080/api/v1 | - |
-| Swagger | http://localhost:8080/swagger-ui.html | - |
-| Frontend | http://localhost:4200 | superadmin / admin123 |
+Este camino **no está verificado hoy** de punta a punta; el camino verificado es `docker compose up -d`.
 
 ---
 
-## 📁 Estructura del Proyecto
+## Funcionalidades y madurez real
+
+| Área | Estado | Evidencia / limitación |
+|------|--------|------------------------|
+| Auth JWT + usuarios | ✅ | Login verificado en vivo 2026-10-21 |
+| Catálogo de productos | ✅ | Persiste en JPA (Flyway V2) |
+| Inventario (stock) | ✅ | `InventoryPersistenceAdapter` JPA real |
+| Órdenes (flujo de estados) | 🟡 | Flujos probados; evento de orden cancelada con 1 test `@Disabled` |
+| Lotes y movimientos | 🔴 | **No persisten**: `LotJpaAdapter`/`MovementJpaAdapter` son `HashMap` en memoria (planificado: feature B) |
+| Picking | 🟡 | Lógica completa; sesiones en memoria |
+| Cold chain | 🔴 | Scaffold en memoria; sin UI |
+| Multi-tenant (aislamiento por schema) | ✅ | Fail-closed, health indicator honesto (feature A, 2026-10-21) |
+| Dashboard KPIs | 🟡 | Endpoints presentes; cobertura de datos no verificada |
+| Frontend Angular | 🟡 | 133 TS, solo 2 specs |
+| E2E Playwright | 🟡 | 7 specs; requiere `npm install` en `e2e/` |
+
+Detalle completo por módulo (COMPLETE / PARTIAL / SCAFFOLD / no verificado): [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
+
+---
+
+## Estructura del proyecto
 
 ```
 Proyecto-WMS/
-├── src/
-│   ├── main/
-│   │   └── java/com/juanbenevento/wms/
-│   │       ├── catalog/          # Gestión de Productos
-│   │       ├── identity/         # Autenticación y Usuarios
-│   │       ├── inventory/        # Core de Inventario
-│   │       ├── orders/          # Gestión de Órdenes
-│   │       ├── warehouse/        # Ubicaciones y Layout
-│   │       ├── audit/           # Auditoría y Eventos
-│   │       └── shared/         # Código Compartido
-│   │           ├── domain/       # Value Objects, Excepciones
-│   │           └── infrastructure/
-│   └── test/                    # Tests Unitarios e Integrados
-├── wms-frontend/               # Angular Application
-│   └── src/app/
-│       ├── core/               # Auth, Guards, Interceptors
-│       └── modules/           # Feature Modules
-│           ├── orders/
-│           ├── inventory/
-│           ├── products/
-│           └── warehouse/
-└── docs/                       # Documentación
-    ├── TECHNICAL_SPEC.md       # Especificación Técnica
-    ├── ARCHITECTURE.md         # Arquitectura Detallada
-    ├── FUNCTIONAL_REQS.md     # Requerimientos Funcionales
-    └── CONTRIBUTING.md         # Guía de Contribución
+├── src/main/java/com/juanbenevento/wms/
+│   ├── audit/           # Auditoría y eventos
+│   ├── catalog/         # Productos
+│   ├── identity/        # Auth, usuarios, onboarding SaaS (SaaSController)
+│   ├── inventory/       # Stock, picking (PickingService/PickingController)
+│   ├── monitoring/      # Cadena de frío
+│   ├── orders/          # Órdenes y flujo de estados
+│   ├── warehouse/       # Ubicaciones y layout
+│   └── shared/          # Tenant isolation, seguridad, dashboard (api/DashboardController)
+├── src/main/resources/
+│   └── db/migration/    # Flyway (V1 tenant_schemas, V2 application tables)
+├── src/test/            # 38 archivos de test (JUnit 5 + Testcontainers)
+├── wms-frontend/        # Angular 20
+├── e2e/                 # Playwright (API + UI)
+├── docs/                # Documentación (ver sección final)
+├── odd/tasks/           # Fuente de verdad de features (specs + tasks + log)
+├── docker-compose.yml   # Dev: postgres + backend + frontend (verificado)
+└── docker-compose.prod.yml  # ⚠️ roto — ver docs/CURRENT_STATE.md §4
 ```
 
 ---
 
-## 📊 Funcionalidades
+## API
 
-### Módulos Implementados
+Bases de rutas verificadas contra los controllers (el detalle de cada endpoint está en Swagger):
 
-| Módulo | Descripción | Estado |
-|--------|-------------|--------|
-| **Productos** | Catálogo con dimensiones, peso, perfil logístico | ✅ |
-| **Ubicaciones** | Layout jerárquico con capacidades | ✅ |
-| **Inventario** | Stock, lotes, vencimientos, estados | ✅ |
-| **Recepción** | Recepción ciega, LPN, QC, put-away | ✅ |
-| **Órdenes** | Estados, prioridades, transiciones | ✅ |
-| **Picking** | Asignación FEFO, short picks, validación | ✅ |
-| **Auditoría** | Eventos de dominio persistidos | ✅ |
-| **Autenticación** | JWT, multi-tenant, roles | ✅ |
-| **Dashboard** | KPIs y métricas | ✅ |
-| **Cold Chain** | Monitoreo de temperatura | ✅ |
-| **E2E Tests** | Playwright tests | ✅ |
+| Controller | Base |
+|-----------|------|
+| Auth | `/api/v1/auth` |
+| Users | `/api/v1/users` |
+| SaaS (onboarding tenants) | `/api/v1/saas` |
+| Products | `/api/v1/products` |
+| Inventory (+ movimientos + picking) | `/api/v1/inventory` |
+| Orders | `/api/v1/orders` |
+| Cold chain | `/api/v1/monitoring` |
+| Dashboard | `/api/v1/dashboard` |
+| Audit | `/api/v1/audit` |
+| Locations | `/api/v1/locations` |
+| Warehouse layout | `/api/v1/warehouse/layout` |
 
-### Flujo de Operaciones
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  RECEPCIÓN  │───>│  PUT-AWAY   │───>│   ALMACÉN   │───>│  ASIGNACIÓN │
-│  (Inbound) │    │             │    │   (Stock)   │    │  (FEFO)     │
-└─────────────┘    └─────────────┘    └─────────────┘    └──────┬──────┘
-                                                                    │
-                                                                    ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  DELIVERED  │<───│   SHIPPED   │<───│   PACKED    │<───│  PICKING    │
-│  (Entrega)  │    │  (Despacho)│    │ (Empaque)   │    │ (Recolección)│
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-```
+Con el stack levantado: **http://localhost:8080/swagger-ui.html**
 
 ---
 
-## 🔌 API Endpoints
+## Testing
 
-### Orders Management
-```
-POST   /api/v1/orders              # Crear orden
-GET    /api/v1/orders              # Listar órdenes
-GET    /api/v1/orders/{id}        # Obtener orden
-POST   /api/v1/orders/{id}/confirm   # Confirmar
-POST   /api/v1/orders/{id}/cancel    # Cancelar
-POST   /api/v1/orders/{id}/hold      # Poner en espera
-POST   /api/v1/orders/{id}/pick      # Iniciar picking
-POST   /api/v1/orders/{id}/pack      # Empaquetar
-POST   /api/v1/orders/{id}/ship      # Enviar
-POST   /api/v1/orders/{id}/deliver    # Entregar
+```powershell
+# Backend — requiere Docker (los tests de integración usan Testcontainers)
+.\mvnw.cmd clean verify
 ```
 
-### Inventory
+Resultado del último run verificable (2026-10-21, con stack Docker corriendo):
+
 ```
-POST   /api/v1/inventory/receive     # Recibir mercancía
-POST   /api/v1/inventory/put-away   # Ubicar en almacén
-POST   /api/v1/inventory/move       # Mover stock
-GET    /api/v1/inventory            # Consultar stock
+Tests run: 317, Failures: 0, Errors: 0, Skipped: 2 — BUILD SUCCESS (~2:20 min)
 ```
 
-### Picking
-```
-POST   /api/v1/picking/start        # Iniciar picking
-POST   /api/v1/picking/pick-line   # Registrar pick
-POST   /api/v1/picking/complete     # Completar picking
-```
-
-### Warehouse
-```
-GET    /api/v1/layout               # Obtener layout
-POST   /api/v1/layout             # Guardar layout
-GET    /api/v1/locations          # Listar ubicaciones
-POST   /api/v1/locations          # Crear ubicación
-
-### Dashboard & KPIs
-```
-GET    /api/v1/dashboard/kpis              # All KPIs
-GET    /api/v1/dashboard/metrics/orders  # Order statistics
-GET    /api/v1/dashboard/metrics/warehouse # Warehouse utilization
-GET    /api/v1/dashboard/activity      # Recent activity
-```
-
-### Cold Chain Monitoring
-```
-POST   /api/v1/monitoring/temperature           # Record temperature
-GET    /api/v1/monitoring/alerts                  # Active alerts
-GET    /api/v1/monitoring/alerts/{location}        # Alerts by location
-GET    /api/v1/monitoring/temperature/history/{location} # Temperature history
-POST   /api/v1/monitoring/alerts/{id}/acknowledge # Acknowledge alert
-```
-```
-
----
-
-## 🧪 Testing
+- Los 2 skipped son tests `@Disabled` justificados: idempotencia concurrente (hang) y
+  evento de orden cancelada (rediseño pendiente).
+- **No hay medición de cobertura**: JaCoCo no está en el `pom.xml`. Comandos tipo
+  `mvn jacoco:report` fallan. Cualquier % de cobertura que aparezca en otro doc es falso.
 
 ```bash
-# Backend tests
-./mvnw test
+# Frontend (casi sin specs: solo 2)
+cd wms-frontend && npm install && npm test
 
-# Frontend tests
-cd wms-frontend
-npm test
-
-# Coverage report
-./mvnw test jacoco:report
-
-# E2E Tests (requires running services)
-cd e2e
-npm install
-npm run test        # All tests
-npm run test:api   # API tests only
-npm run test:ui-suite  # UI tests only
-```
-
-### Test Coverage
-
-| Layer | Tests | Coverage |
-|-------|-------|----------|
-| Domain | 80+ | 95% |
-| Application | 60+ | 85% |
-| Infrastructure | 45+ | 70% |
-| **E2E** | 20+ | API + UI |
-| **Total** | **200+** | **~80%** |
-
----
-
-## ☁️ Deployment
-
-### Docker Compose (Development)
-```bash
-docker-compose up -d
-```
-
-### Docker Compose (Production)
-```bash
-cp .env.production.example .env
-# Edit .env with production values
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Kubernetes (Production)
-```bash
-# Deploy with Helm
-helm install wms ./k8s/values.yaml
-
-# Or apply directly
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/config.yaml
-kubectl apply -f k8s/ingress.yaml
+# E2E Playwright (requiere el stack levantado y npm install)
+cd e2e && npm install
+npm run test:api       # API tests
+npm run test:ui-suite  # UI tests
 ```
 
 ---
 
-## 🔧 Configuration
+## Deployment
 
-### Environment Variables
+| Camino | Estado |
+|--------|--------|
+| `docker compose up -d` (dev) | ✅ Verificado 2026-10-21 (3 servicios healthy, Flyway V1+V2, health OK) |
+| `docker-compose.prod.yml` | ⚠️ Roto: referencia `monitoring/prometheus.yml` inexistente + env vars Resilience4j mal formadas |
+| Kubernetes / Helm | ❌ No instalable: `k8s/` no tiene `templates/`, imagen del deployment ≠ imagen publicada por CI |
+
+No hay ningún comando Helm funcional hoy — si ves `helm install ...` en otro documento, es falso.
+Detalle y evidencia: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) §4.
+
+---
+
+## Configuración
 
 | Variable | Descripción | Default |
 |----------|-------------|---------|
-| `DB_URL` | JDBC URL de PostgreSQL | jdbc:h2:mem:testdb |
-| `DB_USERNAME` | Usuario de DB | sa |
-| `DB_PASSWORD` | Password de DB | (empty) |
-| `JWT_SECRET_KEY` | Clave para JWT | (required) |
-| `JWT_EXPIRATION` | Expiración JWT (ms) | 86400000 |
+| `DB_PASSWORD` | Password de PostgreSQL. **Obligatoria** para arrancar | *(sin default)* |
+| `JWT_SECRET_KEY` | Secret JWT (>= 32 bytes; en prod se recomienda Base64). En `dev` existe un default local | prod: requerida; dev: default |
+| `JWT_EXPIRATION` | Expiración del JWT (ms) | `86400000` |
+| `WMS_TENANT_ISOLATION_ENABLED` | Aislamiento multi-tenant por schema (fail-closed). En `dev` se fuerza `false` localmente | `true` (base); `false` (perfil dev) |
 
-### Profiles
-
-| Profile | Uso | Características |
-|---------|-----|-----------------|
-| `dev` | Desarrollo local | H2, create-drop, logs verbose |
-| `staging` | Pre-producción | PostgreSQL, validate, logs moderados |
-| `prod` | Producción | PostgreSQL, none, secure, sin swagger |
+**Perfiles:** `dev` (aislamiento OFF local, JWT de desarrollo), `staging` (existe; contenido no verificado hoy),
+`prod` (JWT obligatorio, aislamiento ON por defecto).
 
 ---
 
-## 📖 Documentación
+## Documentación
 
-- 📘 [Especificación Técnica](docs/TECHNICAL_SPEC.md) - Visión, alcance, casos de uso
-- 🏗️ [Arquitectura](docs/ARCHITECTURE.md) - Diagramas, patrones, decisiones
-- 📋 [Requerimientos](docs/FUNCTIONAL_REQS.md) - Historias de usuario
-- 🤝 [Contribución](docs/CONTRIBUTING.md) - Guidelines para PRs
-
----
-
-## 🚢 Deployment
-
-### Docker Compose (Desarrollo y Staging)
-
-El proyecto incluye `docker-compose.yml` listo para usar:
-
-```bash
-# Desarrollo completo (PostgreSQL + Backend + Frontend)
-docker-compose up -d
-
-# Con rebuild si hay cambios
-docker-compose up --build -d
-
-# Ver todos los logs
-docker-compose logs -f backend
-
-# Escalar backend (producción)
-docker-compose up -d --scale backend=3
-```
-
-### Kubernetes (Producción)
-
-```bash
-# Deploy con Helm
-helm install wms ./charts/wms \
-  --set database.host=postgres.prod.svc \
-  --set jwt.secretKey=$JWT_SECRET_KEY
-
-# O usando docker-compose con orchestador externo
-docker-compose -f docker-compose.yml config > docker-stack.yml
-docker stack deploy -c docker-stack.yml wms
-```
-
-### Environment Variables para Producción
-
-| Variable | Descripción | Requerido |
-|----------|-------------|-----------|
-| `SPRING_DATASOURCE_URL` | JDBC URL de PostgreSQL | ✅ |
-| `SPRING_DATASOURCE_PASSWORD` | Password de DB | ✅ |
-| `JWT_SECRET_KEY` | Clave JWT (min 256 bits) | ✅ |
-| `WMS_TENANT_ISOLATION_ENABLED` | Habilitar schema isolation | Opcional |
-| `WMS_TENANT_RLS_ENABLED` | Habilitar RLS policies | Opcional |
+- 📍 **[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md)** — estado real verificado (empezá por acá)
+- 🏗️ [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — arquitectura
+- 📋 [docs/FUNCTIONAL_REQS.md](docs/FUNCTIONAL_REQS.md) — requerimientos funcionales
+- 🗺️ [docs/ROADMAP.md](docs/ROADMAP.md) — roadmap
+- 📘 [docs/TECHNICAL_SPEC.md](docs/TECHNICAL_SPEC.md) — especificación
+- 🤝 [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — guía de contribución
 
 ---
 
-## 🤝 Contribuir
+## Contribuir
 
-1. Fork el repositorio
-2. Crear rama feature (`git checkout -b feature/amazing-feature`)
-3. Commit con mensajes convencionales
-4. Push a la rama
-5. Abrir Pull Request
-
-Lee nuestro [CONTRIBUTING.md](docs/CONTRIBUTING.md) para detalles.
+1. Fork y rama feature desde `dev` (`git checkout -b feature/mi-feature dev`)
+2. Commits con convención [Conventional Commits](https://www.conventionalcommits.org/) (sin atribuciones de IA en el mensaje)
+3. PR hacia `dev`; el flujo completo de issues/labels está en `docs/CONTRIBUTING.md`
 
 ---
 
-## 📝 Licencia
+## Licencia
 
-Este proyecto está bajo licencia MIT. Ver [LICENSE](LICENSE) para detalles.
+El repositorio aún **no incluye un archivo `LICENSE`**. Definir la licencia es un pendiente del autor.
 
 ---
 
-## 👤 Autor
+## Autor
 
 **Juan Manuel Benevento**
 - GitHub: [@JuanBenevento](https://github.com/JuanBenevento)
 - LinkedIn: [juanbenevento](https://www.linkedin.com/in/juan-manuel-benevento-1870b5216/)
-
----
