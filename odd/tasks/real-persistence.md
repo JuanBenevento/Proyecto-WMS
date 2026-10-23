@@ -155,4 +155,23 @@ estrategias FEFO/FIFO/LotControl/WeightCertification.
   property las gobierne uniformemente. **Verificado**: árbol consistente 100% en 1.21.3 (sin
   `version managed from 1.20.4` residual) y suite local **323/0/0/2 verde** tras el cambio (sin
   regresión). Lección: cambiar solo el número de versión no basta — el artifact se renombró entre
-  líneas, y el BOM del parent puede pisar la versión declarada.
+  líneas, y el BOM del parent puede pisar la versión declarada. **Este fix NO bastó**: el run
+  39986266041 siguió fallando con el mismo error 1.52 (ver L8 — la causa real estaba dentro de la
+  librería, no en la resolución de dependencias).
+- **L8** (2026-10-23, fix CI definitivo — **CI VERDE**): el bump a 1.21.3 (L7) era **necesario pero
+  insuficiente**. El error `client version 1.52 is too new. Maximum supported API version is 1.48`
+  persistía porque el bug está **dentro** de Testcontainers 1.21.x + docker-java: fuerzan por defecto
+  API 1.44/1.52 y su fallback a 1.32 está bugado (upstream `testcontainers-java` #11360, #11232,
+  #10788 — este último describe **exactamente** nuestro caso: runner GH Actions + Docker API 1.48).
+  **Dos intentos fallidos que NO reintentar**: (1) `DOCKER_API_VERSION=1.48` como env var en el
+  workflow — **NO funciona**, es una env var del CLI de Docker, docker-java **no la lee** (usa la
+  key `api.version`, verificado en `DefaultDockerClientConfig.overrideDockerPropertiesWithEnv`
+  que filtra por `CONFIG_KEYS`); (2) el propio bump de versión (L7), insuficiente por lo anterior.
+  **Fix definitivo** (workaround validado upstream en #10788): paso en `maven.yml` que crea
+  `~/.docker-java.properties` con `api.version=1.48` **antes** de correr Maven. `docker version`
+  confirma el daemon del runner: `client=1.48 server=1.48`; `docker run hello-world` pasa.
+  **Verificado**: run **39987436204** → `conclusion=success`, `BUILD SUCCESS`, cero ocurrencias
+  del error de API. **Lección de diagnóstico (errata propia)**: al revisar logs de CI con
+  PowerShell, NO truncar con `Select-Object -First N` tras un `Where-Object` — hice eso y creí
+  erróneamente que el error de API había desaparecido cuando seguía presente; el grep completo
+  (sin truncar) es la única forma fiable de confirmar la ausencia de un error.
