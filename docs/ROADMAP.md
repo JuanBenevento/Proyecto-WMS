@@ -15,16 +15,16 @@
 | Catálogo de productos | ✅ | JPA real, Flyway V2 |
 | Inventario (stock) | ✅ | `InventoryPersistenceAdapter` JPA real |
 | Órdenes (flujo de estados) | ✅ | Workflows verdes; 1 test de evento cancelado `@Disabled` |
-| Estrategias de asignación | ✅ | FEFO / FIFO / WeightCertification en `inventory/domain/strategy/` — **pero** operan sobre `LotRepository` cuyo adapter aún es en memoria |
+| Estrategias de asignación | ✅ | FEFO / FIFO / WeightCertification en `inventory/domain/strategy/` — operan sobre `LotRepository`, ahora persistente en BD (JPA, feature B1) |
 | Multi-tenant (schema, fail-closed) | ✅ | Feature A, mergeada 2026-10-21 (PR #44) |
 | Layout / ubicaciones | ✅ | Capacidad y zonas implementadas |
 | Dashboard KPIs | 🟡 | Endpoints presentes; cobertura de datos no verificada |
 | Picking | 🟡 | Lógica completa; sesiones en `ConcurrentHashMap` |
 | Auditoría | 🟡 | Bridge `@Async` eventualmente consistente |
-| Lotes y movimientos | 🔴 | `LotJpaAdapter`/`MovementJpaAdapter` = HashMap en memoria |
+| Lotes y movimientos | ✅ | JPA real desde 2026-10-23 (feature B1): `inventory_lots`/`inventory_movements` vía Flyway `V3` |
 | Cold chain | 🔴 | Servicio scaffold en memoria; sin UI Angular |
 | E2E Playwright | 🟡 | 7 specs; requieren `npm install` en `e2e/` |
-| CI en PRs a `dev` | 🔴 | `maven.yml` solo dispara en PRs a `main` y pushes a dev/main |
+| CI en PRs a `dev` | ✅ | `maven.yml` dispara en PRs a `main` **y** `dev` (corregido 2026-10-23, feature D, `cca03c3`) |
 | `docker-compose.prod.yml` | 🔴 | Archivo de monitoring inexistente + env vars mal formadas |
 | Kubernetes / Helm | 🔴 | `k8s/` sin `templates/`; imagen ≠ CI; no instalable |
 | Cobertura de código | 🔴 | Sin JaCoCo: no hay métrica |
@@ -36,8 +36,9 @@
 | Feature | Estado | Fecha |
 |---------|--------|-------|
 | `tenant-isolation-and-schema` (Aislamiento multi-tenant) | ✅ Cerrada | 2026-10-21 (PR #44, issue #43) |
-| `honest-project-documentation` (docs verificadas) | 🔄 En curso | 2026-10-21 (rama `docs/honest-project-documentation`) |
-| Persistencia real de lotes/movimientos/picking/cold-chain | ⏳ Pendiente ("B") | — |
+| `honest-project-documentation` (docs verificadas) | ✅ Cerrada | 2026-10-23 (PR #46, issue #45) |
+| `real-persistence` (lotes y movimientos, "B1") | ✅ Implementada | 2026-10-23 (rama `feat/real-persistence`, pendiente de PR/merge) |
+| Persistencia de sesiones picking/cold-chain ("B2") | ⏳ Pendiente | — |
 | Idempotencia + production hardening | ⏳ Pendiente ("C") | — |
 
 ---
@@ -64,11 +65,13 @@ existen como código real.
 
 ## Próximos pasos (orden propuesto)
 
-1. **Feature B — Persistencia real**: migrar `LotJpaAdapter`, `MovementJpaAdapter`, sesiones
-   de picking y cold-chain de `ConcurrentHashMap` a JPA/Flyway (hoy se pierden al reiniciar).
+1. **Feature B2 — Persistencia de sesiones**: migrar sesiones de picking (`PickingService`) y
+   lecturas/alertas de cold-chain (`ColdChainMonitorService`) de `ConcurrentHashMap` a JPA/Flyway
+   (se pierden al reiniciar). B1 (lotes y movimientos) completada 2026-10-23.
 2. **Feature C — Idempotencia y hardening**: rehabilitar `IdempotencyIntegrationTest`
    (hang) y el evento de orden cancelada; reglas idempotentes en la API.
-3. **CI en PRs a `dev`**: extender los triggers de `maven.yml` (decisión abierta del autor).
+3. **Merge de B1**: `feat/real-persistence` está implementada y verde, pendiente de PR/merge
+   a `dev` (decisión abierta del autor).
 4. **Decidir destino de prod/k8s**: arreglar `docker-compose.prod.yml` + k8s, **o** retirarlos
    de la documentación hasta que sean utilizables.
 5. **RLS** (diferido, decisión S7 de la feature A): solo si aparece requisito de auditoría

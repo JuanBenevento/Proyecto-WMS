@@ -85,10 +85,10 @@ estrategias FEFO/FIFO/LotControl/WeightCertification.
 
 | ID | Spec | Ruta | Commit |
 |----|------|------|--------|
-| TD1 | — | inline | (pendiente) — Rama + plan de feature |
-| TD2 | S4 | inline | (pendiente) — RED: test de integración de persistencia (falla: sin tabla/repos) |
-| TD3 | S1 | inline | (pendiente) — `V3__inventory_lots_and_movements.sql` (GREEN parcial) |
-| TD4 | S2+S3 | inline | (pendiente) — Entidades, repos, mappers y adapters reales (GREEN) |
+| TD1 | — | inline | `22b1d92` — Rama `feat/real-persistence` + plan de feature |
+| TD2 | S4 | inline | `91ff8cb` — RED: `LotAndMovementPersistenceIntegrationTest` (falla: sin tabla/repos) |
+| TD3 | S1 | inline | `cf01949` — `V3__inventory_lots_and_movements.sql` (GREEN parcial: tablas existen) |
+| TD4 | S2+S3 | inline | `24fdb83` — Entidades, repos, mappers y adapters reales (GREEN: 6/6 tests) |
 | TD5 | S5 | inline | (pendiente) — Suite completa + aislamiento |
 | TD6 | S6 | inline | (pendiente) — Conciliación docs + openspec + corrección ADR-004 |
 | TD7 | — | inline | (pendiente) — Engram mirror + decisión push/PR del usuario |
@@ -111,3 +111,23 @@ estrategias FEFO/FIFO/LotControl/WeightCertification.
   solo nombres `*UseCase`; los servicios existen (`TransferInventoryService`,
   `RecordTemperatureService`, `QueryLotHistoryService`, `QueryExpiringLotsService`,
   `InternalOperationsService.processInventoryAdjustment`). Se corrige en TD6.
+- **L2** (2026-10-23, TD2 RED): Test escrito y commiteado (`91ff8cb`) antes que la implementación.
+  Resultado esperado y obtenido: `tablesExistInInformationSchema` falla (0L ≠ 1L) y los dos tests
+  JDBC directos fallan con `BadSqlGrammar` (tablas inexistentes); los 3 tests de roundtrip/orden
+  del port PASAN (el adapter HashMap los satisface en memoria) — esos 3 son el contrato de
+  comportamiento que debe sobrevivir al swap. **Enmienda de spec S2 justificada**: `Lot` gana
+  `reconstitute()` (factory estándar de rehidración DDD); sin él, cada lectura resetearía
+  `createdAt`/`createdBy` porque `create()` siempre los pone a "ahora/SYSTEM". Sin cambio de
+  comportamiento — solo un constructor alternativo.
+- **L3** (2026-10-23, TD4 gotcha): el query derivado de Spring Data
+  `findExpiryDateLessThanEqualAndStatusOrderByExpiryDateAsc` **no compila a query**: el parser
+  resuelve `ExpiryDate` y luego falla con "No property 'asc' found for type 'LocalDate'".
+  Lección: con predicados compuestos largos, usar `@Query` JPQL explícito en vez de nombres
+  derivados. Mismo fix aplicado al patrón de movements (`findBetweenExclusive` con `> <`
+  explícitos para preservar la semántica exclusiva del HashMap anterior).
+- **L4** (2026-10-23, TD4+TD5 GREEN): swap completado. `Lot.reconstitute()` preserva timestamps;
+  `InventoryMovement` (`@Value`) se reconstruye con su constructor público. `InventoryMovementJpaRepository`
+  extiende `Repository` (no `JpaRepository`) → **append-only por construcción** (sin métodos
+  delete/update en el puerto a BD). Suite completa: **323/0/0/2** (317 base + 6 nuevos; 2 skipped
+  conocidos). Surefire force-kills el fork JVM tras 30s (hilo colgado pre-existente, comportamiento
+  conocido — no es regresión). Jar construido, working tree limpia.

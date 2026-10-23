@@ -43,24 +43,24 @@
 
 ## Phase 5: Application Services & Use Cases
 
-- [ ] 5.1 Create `RegisterReceiptCommand.java` **and** `RegisterReceiptUseCase.java` — el Command existe (`inventory/application/RegisterReceiptCommand.java`); la interfaz `RegisterReceiptUseCase` **no existe**
+- [ ] 5.1 Create `RegisterReceiptCommand.java` **and** `RegisterReceiptUseCase.java` — el Command existe (`inventory/application/RegisterReceiptCommand.java`); la interfaz `RegisterReceiptUseCase` **no existe** (la lógica vive en `RegisterReceiptService.java`)
 - [x] 5.2 Create `RegisterReceiptService.java` — real: `inventory/application/service/RegisterReceiptService.java`
-- [ ] 5.3 Create `RegisterIssueCommand.java` **and** `RegisterIssueUseCase.java` — el Command existe (`inventory/application/RegisterIssueCommand.java`); la interfaz `RegisterIssueUseCase` **no existe**
+- [ ] 5.3 Create `RegisterIssueCommand.java` **and** `RegisterIssueUseCase.java` — el Command existe (`inventory/application/RegisterIssueCommand.java`); la interfaz `RegisterIssueUseCase` **no existe** (la lógica vive en `RegisterIssueService.java`)
 - [x] 5.4 Create `RegisterIssueService.java` — real: `inventory/application/service/RegisterIssueService.java`
-- [ ] 5.5 Create `TransferInventoryUseCase.java` — no existe (hay `InternalMoveCommand` en `port/in/command/`, pero no el use case)
-- [ ] 5.6 Create `AdjustInventoryUseCase.java` — no existe (hay `InventoryAdjustmentCommand`, no el use case)
-- [ ] 5.7 Create `RecordTemperatureUseCase.java` — no existe
-- [ ] 5.8 Create `RecordWeightUseCase.java` — no existe
-- [ ] 5.9 Create `QueryLotHistoryUseCase.java` — no existe
-- [ ] 5.10 Create `QueryExpiringLotsUseCase.java` — no existe
+- [x] 5.5 Create `TransferInventoryUseCase.java` — real (equivalente): `inventory/application/service/TransferInventoryService.java` (la interfaz `*UseCase` no existe; el código usa servicios directos)
+- [x] 5.6 Create `AdjustInventoryUseCase.java` — real (equivalente): `inventory/application/service/InternalOperationsService.java` (`processInventoryAdjustment`)
+- [x] 5.7 Create `RecordTemperatureUseCase.java` — real (equivalente): `inventory/application/service/RecordTemperatureService.java`
+- [ ] 5.8 Create `RecordWeightUseCase.java` — **no existe** ni interfaz ni servicio con ese nombre (corregido 2026-10-23: búsqueda previa solo miraba `*UseCase`; ahora verificado con `Get-ChildItem *Service.java` — tampoco hay `RecordWeightService`)
+- [x] 5.9 Create `QueryLotHistoryUseCase.java` — real (equivalente): `inventory/application/service/QueryLotHistoryService.java`
+- [x] 5.10 Create `QueryExpiringLotsUseCase.java` — real (equivalente): `inventory/application/service/QueryExpiringLotsService.java`
 
 ## Phase 6: Infrastructure (Persistence, REST)
 
-- [ ] 6.1 Create Flyway migration `V5__add_inventory_movement_schema.sql` — **no existe**; solo `V1__initial_tenant_structure.sql` y `V2__application_tables.sql`. Tablas de lotes/movimientos fuera de Flyway (feature B)
-- [ ] 6.2 Create `LotEntity.java` JPA entity — no existe
-- [ ] 6.3 Create `InventoryMovementEntity.java` JPA entity — no existe
-- [ ] 6.4 Create JPA adapter for `LotRepository` — existe `LotJpaAdapter.java` en `inventory/infrastructure/out/persistence/` pero **es un HashMap en memoria**, no JPA (feature B); la tarea no está completa
-- [ ] 6.5 Create JPA adapter for `MovementRepository` — existe `MovementJpaAdapter.java` pero **es un HashMap en memoria**, no JPA (feature B); la tarea no está completa
+- [x] 6.1 Create Flyway migration — real (2026-10-23, feature B1): `V3__inventory_lots_and_movements.sql` con `inventory_lots` + `inventory_movements` (el plan proponía "V5"; se usó el siguiente número real tras V1/V2)
+- [x] 6.2 Create `LotEntity.java` JPA entity — real (2026-10-23): `inventory/infrastructure/out/persistence/LotEntity.java`
+- [x] 6.3 Create `InventoryMovementEntity.java` JPA entity — real (2026-10-23): `inventory/infrastructure/out/persistence/InventoryMovementEntity.java`
+- [x] 6.4 Create JPA adapter for `LotRepository` — real (2026-10-23): `LotJpaAdapter.java` ahora delega a `LotJpaRepository` (Spring Data JPA); era un HashMap hasta la feature B1
+- [x] 6.5 Create JPA adapter for `MovementRepository` — real (2026-10-23): `MovementJpaAdapter.java` ahora delega a `InventoryMovementJpaRepository` (append-only, sin delete/update); era un HashMap hasta la feature B1
 - [ ] 6.6 Create DTOs: `ReceiptResponse.java`, `IssueResponse.java`, `LotHistoryResponse.java` — solo existe `ReceiptResponse.java` (en `inventory/application/`); `IssueResponse` y `LotHistoryResponse` **no existen**
 - [x] 6.7 Create `InventoryMovementController.java` with REST endpoints — real: `inventory/infrastructure/in/rest/InventoryMovementController.java`
 - [x] 6.8 Create `RegisterReceiptCommand.java`, `RegisterIssueCommand.java` — existen ambos en `inventory/application/` (el plan los ubicaba en `application/port/in/command/`)
@@ -74,11 +74,15 @@
 - [ ] 7.5 Write integration tests for `RegisterIssueUseCase` with allocation — no existen
 - [ ] 7.6 Write integration tests for `QueryLotHistoryUseCase` — no existen (el use case tampoco)
 - [ ] 7.7 Write MockMvc integration tests for REST controller endpoints — no existen para `InventoryMovementController`
-- [ ] 7.8 Run `./mvnw test` and verify all tests pass — la suite global está verde (317/0/0/2, 2026-10-21), pero las pruebas 7.3–7.7 siguen pendientes; tarea abierta
+- [x] 7.8 Run `./mvnw test` and verify all tests pass — la suite global está verde (323/0/0/2, 2026-10-23, tras feature B1); las pruebas 7.3–7.7 siguen pendientes
 
 ---
 
-**Resumen de conciliación (2026-10-21): 25/47 completadas.** Las 22 abiertas son reales: 8 de
-ellas (6.1–6.5 + relacionadas) corresponden exactamente al alcance de la feature B
-(persistencia JPA de lotes/movimientos), el resto son casos de uso/DTOs/tests que nunca se
-construyeron.
+**Resumen de conciliación (2026-10-23, actualizado tras feature B1):** Phase 5 corregida —
+los servicios `TransferInventoryService`, `RecordTemperatureService`, `QueryLotHistoryService`,
+`QueryExpiringLotsService` y `InternalOperationsService.processInventoryAdjustment` **sí existen**
+(la conciliación de 2026-10-21 solo buscaba nombres `*UseCase`, que nunca se usaron en el código;
+quedan marcadas 5.5-5.7, 5.9, 5.10 con sus equivalentes reales). `RecordWeight*` sigue sin existir
+(5.8 abierta, verificado 2026-10-23). Phase 6 (persistencia) completada por la feature B1:
+migración `V3`, `LotEntity`, `InventoryMovementEntity` y adapters JPA reales. La feature B1
+también añadió `LotAndMovementPersistenceIntegrationTest` (6 tests RED→GREEN).

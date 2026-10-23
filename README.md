@@ -23,7 +23,8 @@ catálogo de productos, ubicaciones, inventario, órdenes con flujo de estados
 monitoreo de cadena de frío y aislamiento multi-tenant por schema (SaaS, fail-closed).
 
 > **Transparencia:** el sistema está en desarrollo activo. Hay módulos completos y módulos
-> parciales o en esqueleto (p. ej. lotes/movimientos y cold-chain aún no persisten en BD).
+> parciales o en esqueleto (p. ej. cold-chain y las sesiones de picking aún no persisten en BD;
+> los lotes/movimientos sí persisten desde 2026-10-23, feature B1).
 > El estado por módulo con evidencia está en [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md);
 > no creas ningún README que diga "v1.0 completado" ni porcentajes de cobertura inventados.
 
@@ -105,7 +106,7 @@ Este camino **no está verificado hoy** de punta a punta; el camino verificado e
 | Catálogo de productos | ✅ | Persiste en JPA (Flyway V2) |
 | Inventario (stock) | ✅ | `InventoryPersistenceAdapter` JPA real |
 | Órdenes (flujo de estados) | 🟡 | Flujos probados; evento de orden cancelada con 1 test `@Disabled` |
-| Lotes y movimientos | 🔴 | **No persisten**: `LotJpaAdapter`/`MovementJpaAdapter` son `HashMap` en memoria (planificado: feature B) |
+| Lotes y movimientos | ✅ | JPA real desde 2026-10-23 (feature B1): tablas `inventory_lots`/`inventory_movements` vía Flyway `V3` |
 | Picking | 🟡 | Lógica completa; sesiones en memoria |
 | Cold chain | 🔴 | Scaffold en memoria; sin UI |
 | Multi-tenant (aislamiento por schema) | ✅ | Fail-closed, health indicator honesto (feature A, 2026-10-21) |
