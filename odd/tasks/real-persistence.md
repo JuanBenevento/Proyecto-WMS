@@ -132,15 +132,27 @@ estrategias FEFO/FIFO/LotControl/WeightCertification.
   conocidos). Surefire force-kills el fork JVM tras 30s (hilo colgado pre-existente, comportamiento
   conocido — no es regresión). Jar construido, working tree limpia.
 - **L6** (2026-10-23, TD7 CI): PR #48 creado con issue #47 (`status:approved`) y label `type:feature`.
-  Workflow `maven.yml` (corre en PRs a `dev` desde la feature D) ejecuta `./mvnw clean verify` en
-  `ubuntu-latest` y **falla por tests que requieren Docker/Testcontainers** (8: incluye
-  `LotAndMovementPersistenceIntegrationTest` y preexistentes `TenantAwareDataSourceIntegrationTest`,
-  `PickingWorkflowIntegrationTest`, `WmsApplicationTests`, etc.) con `Could not find a valid Docker
-  environment`. **No hay errores de compilación ni de lógica** — verificado leyendo los logs del job.
-  Causa raíz: el runner de GitHub Actions no tiene Docker accesible para Testcontainers; el workflow
-  solo levanta un servicio `postgres:16` como contenedor de health-check pero no habilita Testcontainers
-  (que necesita Docker daemon para crear sus propios contenedores efímeros). **Problema preexistente
-  de infraestructura de CI**, no introducido por B1. La suite local completa pasa verde con el stack
-  Docker arriba (`docker compose up -d`). Decisión pendiente del usuario: (a) mergear a pesar del CI
-  roto (evidencia local verificada), (b) arreglar el workflow para que skippee o xfail los tests
-  Docker-dependent en CI, (c) investigar por qué `ubuntu-latest` no tiene Docker (config del repo).
+  Workflow `maven.yml` ejecuta `./mvnw clean verify` en `ubuntu-latest` y **falla**: 8 tests
+  Docker-dependent (incluye `LotAndMovementPersistenceIntegrationTest` y preexistentes
+  `TenantAwareDataSourceIntegrationTest`, `PickingWorkflowIntegrationTest`, `WmsApplicationTests`,
+  etc.) en error con `Could not find a valid Docker environment`. **No hay errores de compilación
+  ni de lógica** — verificado leyendo los logs del job.
+  *Diagnóstico inicial (corregido en L7)*: se atribuyó a "el runner no tiene Docker para
+  Testcontainers". **Eso era incorrecto** — Docker SÍ está y el daemon responde; ver L7.
+- **L7** (2026-10-23, fix CI — Opción A elegida por el usuario): **diagnóstico correcto con
+  evidencia**. El log del job muestra que el daemon responde pero la API no casa:
+  `UnixSocketClientProviderStrategy: BadRequestException (Status 400: "client version 1.52 is
+  too new. Maximum supported API version is 1.48")`. Causa raíz doble: (1) el BOM
+  `spring-boot-dependencies` 3.4.1 declara `<testcontainers.version>1.20.4</testcontainers.version>`
+  y **pisa cualquier `<version>` directa** en el `pom.xml` (visible con
+  `mvn dependency:tree -Dverbose` → `version managed from X`); (2) Testcontainers 1.20.4 usa un
+  `docker-java` que negocia API Docker 1.52, incompatible con el daemon del runner (1.48).
+  **Fix**: (a) property `<testcontainers.version>1.21.3</testcontainers.version>` en `<properties>`
+  (override canónico del BOM con `spring-boot-starter-parent`), (b) renombrar el artifact de JUnit 5
+  de `testcontainers-junit-jupiter` (nombre de la **línea 2.x**) a `junit-jupiter` (nombre real en la
+  **línea 1.x** — verificado en Maven Central: `testcontainers-junit-jupiter-1.21.3.pom` → 404),
+  (c) quitar los `<version>` explícitos de las dependencias Testcontainers para que el BOM con la
+  property las gobierne uniformemente. **Verificado**: árbol consistente 100% en 1.21.3 (sin
+  `version managed from 1.20.4` residual) y suite local **323/0/0/2 verde** tras el cambio (sin
+  regresión). Lección: cambiar solo el número de versión no basta — el artifact se renombró entre
+  líneas, y el BOM del parent puede pisar la versión declarada.
