@@ -131,3 +131,16 @@ estrategias FEFO/FIFO/LotControl/WeightCertification.
   delete/update en el puerto a BD). Suite completa: **323/0/0/2** (317 base + 6 nuevos; 2 skipped
   conocidos). Surefire force-kills el fork JVM tras 30s (hilo colgado pre-existente, comportamiento
   conocido — no es regresión). Jar construido, working tree limpia.
+- **L6** (2026-10-23, TD7 CI): PR #48 creado con issue #47 (`status:approved`) y label `type:feature`.
+  Workflow `maven.yml` (corre en PRs a `dev` desde la feature D) ejecuta `./mvnw clean verify` en
+  `ubuntu-latest` y **falla por tests que requieren Docker/Testcontainers** (8: incluye
+  `LotAndMovementPersistenceIntegrationTest` y preexistentes `TenantAwareDataSourceIntegrationTest`,
+  `PickingWorkflowIntegrationTest`, `WmsApplicationTests`, etc.) con `Could not find a valid Docker
+  environment`. **No hay errores de compilación ni de lógica** — verificado leyendo los logs del job.
+  Causa raíz: el runner de GitHub Actions no tiene Docker accesible para Testcontainers; el workflow
+  solo levanta un servicio `postgres:16` como contenedor de health-check pero no habilita Testcontainers
+  (que necesita Docker daemon para crear sus propios contenedores efímeros). **Problema preexistente
+  de infraestructura de CI**, no introducido por B1. La suite local completa pasa verde con el stack
+  Docker arriba (`docker compose up -d`). Decisión pendiente del usuario: (a) mergear a pesar del CI
+  roto (evidencia local verificada), (b) arreglar el workflow para que skippee o xfail los tests
+  Docker-dependent en CI, (c) investigar por qué `ubuntu-latest` no tiene Docker (config del repo).
