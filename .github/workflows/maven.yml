@@ -35,6 +35,23 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Diagnóstico Docker + fijar API version para Testcontainers
+        # Testcontainers 1.21.x fuerza por defecto API Docker 1.44 y su fallback a 1.32
+        # está bugado (testcontainers-java#11360), así que contra el daemon de este runner
+        # (API máx 1.48, ver testcontainers-java#10788) termina en
+        # "client version 1.52 is too new. Maximum supported API version is 1.48".
+        # DOCKER_API_VERSION lo detecta docker-java antes de construir el config y
+        # desactiva la negociación rota. Se fija a 1.48 (el máximo que soporta el daemon).
+        # Ver odd/tasks/real-persistence.md L7-L8.
+        run: |
+          echo "DOCKER_API_VERSION=1.48" >> "$GITHUB_ENV"
+          echo "--- Diagnóstico Docker del runner ---"
+          docker version
+          echo "--- Server API version reportada ---"
+          docker version --format '{{.Server.APIVersion}}'
+          echo "--- Prueba de contenedor efímero (lo que Testcontainers hará) ---"
+          docker run --rm hello-world
+
       - name: Grant execute permission for mvnw
         run: chmod +x mvnw
 
