@@ -83,9 +83,10 @@ Cada contexto (`catalog`, `orders`, `inventory`, …) sigue:
 - `infrastructure/in/rest/` — controllers REST (adaptadores de entrada).
 - `infrastructure/out/persistence/` — repositorios JPA/Spring Data (adaptadores de salida).
 
-**Advertencia de madurez:** el nombre de una clase no garantiza su comportamiento.
-`LotJpaAdapter` y `MovementJpaAdapter` viven en `out/persistence` pero **no son JPA**:
-son `HashMap` en memoria (ver `docs/CURRENT_STATE.md` §5 — pendiente de la feature B).
+**Estado (2026-10-23, feature B1):** `LotJpaAdapter` y `MovementJpaAdapter` **sí son JPA
+ahora**: persisten contra `inventory_lots`/`inventory_movements` (migración `V3`) vía Spring
+Data. Antes de B1 eran `HashMap` en memoria a pesar del nombre "Jpa" — lección de que el
+nombre de una clase no garantiza su comportamiento (ver `docs/CURRENT_STATE.md`).
 
 ### 3.2 Multi-tenant por schema (estado post feature A)
 
@@ -103,8 +104,11 @@ Decisión de diseño: **un schema PostgreSQL por tenant** (`tenant_{tenantId}`),
   local; se puede forzar con `WMS_TENANT_ISOLATION_ENABLED`).
 
 **No implementado (decisión documentada S7):** PostgreSQL RLS. Los archivos SQL
-`V__enable_rls_*.sql`, `SearchPathConnectionInterceptor` e `SchemaIsolationValidator`
-fueron **eliminados** por la feature A. Si otro documento los menciona como vigentes, está desactualizado.
+`V__enable_rls_*.sql` y la clase `SearchPathConnectionInterceptor` fueron **eliminados** por
+la feature A. `SchemaIsolationValidator` **SÍ existe** y se usa
+(`shared/infrastructure/tenant/SchemaIsolationValidator.java`, lo usan
+`TenantIsolationIntegrationTest` y `SchemaIsolationValidatorTest`) — una versión anterior de
+este documento afirmaba lo contrario por error; corregido 2026-10-23 (feature B1).
 
 ### 3.3 Eventos de dominio
 
@@ -171,7 +175,8 @@ classDiagram
 Notas:
 
 - `Order` tiene flujo de estados probado (crear → confirmar → pick → pack → ship → deliver).
-- `Lot` e `InventoryMovement` existen como dominio, pero sus adapters **no persisten** (§3.1).
+- `Lot` e `InventoryMovement` persisten vía JPA desde la feature B1 (2026-10-23, migración
+  `V3`, ver §3.1).
 - No existe `PickingTask` ni `FEFOStrategy`: el picking vive en `PickingService` y el
   put-away usa `SmartPutAwayStrategy` (única implementación), inyectado en
   `warehouse/application/service/LocationSuggestionService.java`.
@@ -205,9 +210,10 @@ Notas:
   nivel de base de datos: un DBA o backup comprometido ve datos de todas las empresas.
 - **Decisión original (2026-04):** schema por tenant + RLS como capa extra.
 - **Implementación real (2026-10-21, feature A):** schema-based con wrapper de DataSource
-  fail-closed (§3.2). **RLS NO está implementado** — se diferenció (decisión S7) y sus
-  archivos fueron eliminados para que el estado sea honesto. `V__enable_rls_*.sql`,
-  `SearchPathConnectionInterceptor` e `SchemaIsolationValidator` **ya no existen**.
+  fail-closed (§3.2). **RLS NO está implementado** — se diferenció (decisión S7); los artefactos
+  `V__enable_rls_*.sql` y `SearchPathConnectionInterceptor` fueron eliminados para que el estado
+  sea honesto. (`SchemaIsolationValidator` NO fue eliminado: sigue existiendo y usándose —
+  corrección de errata propia, 2026-10-23.)
 - **Estado:** ✅ aislamiento por schema implementado y verificado en vivo (suite 317/0/0/2,
   health indicator UP); ⏳ RLS y migración de datos a producción, pendientes.
 - **Consecuencias:** backups/restores deben contemplar múltiples schemas; los usuarios de BD
@@ -221,6 +227,8 @@ Notas:
 Ver `docs/CURRENT_STATE.md` §5 para la lista completa con evidencia. Las tres más
 estruturales:
 
-1. Adaptadores "Jpa" en memoria (lotes/movements) y picking/cold-chain en `ConcurrentHashMap`.
-2. CI que no corre en PRs hacia `dev` y despliegues (prod-compose, k8s) no utilizables.
+1. Persistencia de **sesiones** en memoria: picking (`PickingService`) y cold-chain
+   (`ColdChainMonitorService`) en `ConcurrentHashMap` — feature B2 (lotes/movimientos ya
+   persisten desde B1, 2026-10-23).
+2. Despliegues (prod-compose, k8s) no utilizables; CI cubre PRs a `main`/`dev` pero no despliega.
 3. Sin medición de cobertura ni de performance.

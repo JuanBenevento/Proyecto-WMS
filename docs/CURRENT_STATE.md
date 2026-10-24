@@ -41,7 +41,7 @@ limitaciones documentadas · **SCAFFOLD** = código existe pero no persiste / es
 | `identity` (usuarios/auth) | COMPLETE | Login en vivo 2026-10-21: `POST /api/v1/auth/login` → 200 + JWT; usuarios reales en BD: psql → `superadmin/SUPER_ADMIN`; seed idempotente `shared/infrastructure/config/DataInitializer.java` |
 | `catalog` (productos) | COMPLETE | Products persiste en JPA (tabla `products` creada por `db/migration/V2__application_tables.sql`, generada del metamodelo Hibernate); endpoint consultado en E2E `TenantFailClosedEndToEndTest` |
 | `orders` (órdenes) | PARTIAL | Flujos de estado probados (`OrderInventoryIntegrationTest`, `PickingWorkflowIntegrationTest` en suite verde 2026-10-21); **evento `OrderCancelled`**: test `EventPersistenceIntegrationTest:192` sigue `@Disabled` |
-| `inventory` (stock + lotes/movimientos) | PARTIAL | Persistencia de stock real: `InventoryPersistenceAdapter` (JPA, Spring Data) — suite verde. **PERO** lotes y movimientos NO persisten: `LotJpaAdapter` y `MovementJpaAdapter` son `HashMap` pese al nombre "Jpa" (análisis #611 §5, verificado en código) → **feature B** |
+| `inventory` (stock + lotes/movimientos) | PARTIAL | Persistencia de stock real: `InventoryPersistenceAdapter` (JPA, Spring Data). **Lotes y movimientos SÍ persisten desde 2026-10-23** (feature B1): `LotJpaAdapter`/`MovementJpaAdapter` usan JPA contra `inventory_lots`/`inventory_movements` (migración Flyway `V3`, suite 323/0/0/2). Quedan **en memoria** las sesiones de picking y cold-chain (feature B2) |
 | `picking` (subdomain dentro de `inventory`) | PARTIAL | `inventory/application/service/PickingService.java` — lógica completa pero sesiones en `ConcurrentHashMap` → estado **en memoria**, se pierde al reiniciar (análisis #611 §5); controller `inventory/infrastructure/in/rest/PickingController.java` |
 | `monitoring` (cadena de frío) | SCAFFOLD | `monitoring/application/service/ColdChainMonitorService.java` usa `ConcurrentHashMap` (datos en memoria, no multi-tenant-safe); sin UI Angular para `/api/v1/monitoring/*` (análisis #611 §6) |
 | `dashboard` (en `shared/api`) | PARTIAL | `shared/api/DashboardController.java` + visualizaciones KPI (commits `427bd59`, `87b1e0e`); **no verificado hoy** su cobertura de datos reales |
@@ -88,7 +88,7 @@ Tests run: 317, Failures: 0, Errors: 0, Skipped: 2 — BUILD SUCCESS (2:20 min)
 
 ## 5. Riesgos abiertos (ordenados por impacto)
 
-1. **Persistencia en memoria (lotes, movimientos, picking, cold-chain)** — datos se pierden al reiniciar y no son multi-tenant-safe. Camino: feature B. Evidencia: `inventory/infrastructure/out/persistence/LotJpaAdapter.java` y `MovementJpaAdapter.java` (HashMap pese al nombre "Jpa"), `inventory/application/service/PickingService.java` (ConcurrentHashMap), `monitoring/application/service/ColdChainMonitorService.java`.
+1. **Persistencia en memoria (picking y cold-chain)** — sesiones de picking (`PickingService`, `ConcurrentHashMap`) y lecturas/alertas de cadena de frío (`ColdChainMonitorService`, `ConcurrentHashMap`) se pierden al reiniciar y no son multi-tenant-safe. Camino: feature B2. **Resuelto 2026-10-23 (B1)**: lotes y movimientos SÍ persisten vía JPA + migración `V3__inventory_lots_and_movements.sql`.
 2. **Sin medición de cobertura** — JaCoCo ausente del `pom.xml`; ningún % de cobertura es citable.
 3. **k8s/prod no desplegable** — sin templates Helm, mismatch de imagen, ingress a Service inexistente, secrets placeholder `changeme` versionados en `k8s/values.yaml`.
 4. **`docker-compose.prod.yml` roto** — archivo de monitoring inexistente + env vars Resilience4j mal formadas.
@@ -97,14 +97,14 @@ Tests run: 317, Failures: 0, Errors: 0, Skipped: 2 — BUILD SUCCESS (2:20 min)
 7. **Frontend con 2 specs / 133 TS** y E2E Playwright sin `node_modules` — cobertura de UI casi nula.
 8. **RLS: no implementado** — decisión S7 de la feature A: los archivos SQL se eliminaron; el health reporta `rls: not-implemented` en vez de inventar estado (`TenantIsolationHealthIndicator.java`).
 9. **Docs históricos con afirmaciones falsas** — "v1.0 Completado", "~80% cobertura", "185+ tests": corregidos por esta feature (`docs/ROADMAP.md` TD5, `README.md` TD2, etc.).
-10. **`src/main/resources/schema.sql`** — DDL de lots/inventory_movements que **no se usa en runtime** (Flyway es el dueño del esquema).
+10. **`src/main/resources/schema.sql`** — DDL de lots/inventory_movements que **no se usa en runtime** (Flyway es el dueño del esquema; las tablas reales viven en `V3__inventory_lots_and_movements.sql`).
 
 ---
 
 ## 6. Cómo se verificó (comandos re-ejecutados)
 
 ```powershell
-.\mvnw.cmd clean verify                                  # 317/0/0/2 BUILD SUCCESS (con stack Docker arriba)
+.\mvnw.cmd clean verify                                  # 323/0/0/2 BUILD SUCCESS (2026-10-23, con stack Docker arriba; incluye 6 tests de persistencia real de lotes/movimientos)
 docker compose ps                                         # 3 servicios healthy
 # GET http://localhost:8080/actuator/health               → 200 {"status":"UP",...,"tenantIsolation":...}
 # POST /api/v1/auth/login {"username":"superadmin","password":"root123"} → 200 + JWT
