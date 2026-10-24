@@ -3,7 +3,6 @@ package com.juanbenevento.wms.integration.config;
 import com.juanbenevento.wms.orders.application.port.out.DomainEventRepositoryPort;
 import com.juanbenevento.wms.orders.domain.event.DomainEvent;
 import com.juanbenevento.wms.orders.infrastructure.event.EventBus;
-import com.juanbenevento.wms.orders.infrastructure.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.TestConfiguration;

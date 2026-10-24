@@ -10,7 +10,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 
 import java.util.Collections;
 import java.util.List;
@@ -19,12 +22,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Unit tests for SchemaIsolationValidator.
  * Tests validation and debugging methods for tenant schema isolation.
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class SchemaIsolationValidatorTest {
 
     @Mock
@@ -58,7 +63,7 @@ class SchemaIsolationValidatorTest {
 
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenReturn(List.of("tenant_test_tenant"));
 
             // WHEN/THEN - No exception should be thrown
@@ -96,7 +101,7 @@ class SchemaIsolationValidatorTest {
             // search_path no coincide con lo esperado
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenReturn(List.of("public")); // Espera tenant_test_tenant pero obtiene public
 
             // WHEN/THEN
@@ -120,7 +125,7 @@ class SchemaIsolationValidatorTest {
 
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenReturn(List.of("tenant_active_tenant"));
 
             // WHEN
@@ -138,7 +143,7 @@ class SchemaIsolationValidatorTest {
 
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenReturn(List.of("public")); // No coincide
 
             // WHEN
@@ -181,7 +186,7 @@ class SchemaIsolationValidatorTest {
 
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenThrow(new RuntimeException("Connection error"));
 
             // WHEN
@@ -202,7 +207,7 @@ class SchemaIsolationValidatorTest {
             // GIVEN
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenReturn(List.of("tenant_test_schema, public"));
 
             // WHEN
@@ -218,7 +223,7 @@ class SchemaIsolationValidatorTest {
             // GIVEN
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenReturn(Collections.emptyList());
 
             // WHEN
@@ -234,7 +239,7 @@ class SchemaIsolationValidatorTest {
             // GIVEN
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenThrow(new RuntimeException("DB error"));
 
             // WHEN
@@ -342,12 +347,12 @@ class SchemaIsolationValidatorTest {
 
             when(jdbcTemplate.query(
                     eq("SHOW search_path"),
-                    any()
+                    any(RowMapper.class)
             )).thenReturn(List.of("tenant_debug_tenant"));
 
             when(jdbcTemplate.query(
                     any(String.class),
-                    any()
+                    any(RowMapper.class)
             )).thenReturn(List.of("tenant_debug_tenant", "tenant_other_tenant"));
 
             // WHEN

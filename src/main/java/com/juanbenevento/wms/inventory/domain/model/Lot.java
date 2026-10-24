@@ -142,7 +142,7 @@ public class Lot {
      */
     public static Lot create(String lotNumber, String productSku, String batchNumber,
             LocalDate productionDate, String origin) {
-        return create(lotNumber, productSku, batchNumber, productionDate, origin, null, null, null, null, null, Map.of());
+        return create(lotNumber, productSku, batchNumber, productionDate, origin, null, null, null, null, Map.of());
     }
 
     /**
@@ -176,6 +176,32 @@ public class Lot {
                 now,
                 "SYSTEM"
         );
+    }
+
+    /**
+     * Reconstitution factory for persistence (feature real-persistence / B1).
+     * Rebuilds a Lot exactly as stored (status, audit timestamps, createdBy),
+     * bypassing the ACTIVE-only create() factory. No behavior change — this is
+     * the standard DDD rehydrate path for JPA adapters.
+     */
+    public static Lot reconstitute(String lotNumber, String productSku, String batchNumber,
+            LocalDate productionDate, String origin, LotStatus status, LocalDate expiryDate,
+            TemperatureRange temperatureRange, BigDecimal netWeight, BigDecimal grossWeight,
+            Map<String, String> metadata, LocalDateTime createdAt, LocalDateTime updatedAt,
+            String createdBy) {
+        if (lotNumber == null || lotNumber.isBlank()) {
+            throw new IllegalArgumentException("Lot number is required");
+        }
+        if (productSku == null || productSku.isBlank()) {
+            throw new IllegalArgumentException("Product SKU is required");
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("Status is required");
+        }
+        return new Lot(lotNumber, productSku, batchNumber, productionDate, origin, status,
+                expiryDate, temperatureRange, netWeight, grossWeight,
+                metadata == null ? Map.of() : metadata,
+                createdAt, updatedAt, createdBy);
     }
 
     // ============== STATUS TRANSITIONS ==============

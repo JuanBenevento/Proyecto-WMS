@@ -1,9 +1,11 @@
 package com.juanbenevento.wms.integration;
 
+import com.juanbenevento.wms.integration.config.RequiresDocker;
 import com.juanbenevento.wms.shared.domain.valueobject.WmsConstants;
 import com.juanbenevento.wms.shared.infrastructure.tenant.SchemaIsolationValidator;
 import com.juanbenevento.wms.shared.infrastructure.tenant.TenantContext;
 import com.juanbenevento.wms.shared.infrastructure.tenant.TenantSchemaManager;
+import com.juanbenevento.wms.shared.infrastructure.tenant.TenantSchemaMissingException;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,23 +19,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * End-to-end integration tests for schema-based tenant isolation.
- *
- * <p>Tests verify that:
- * <ul>
- *   <li>Tenant schemas are properly isolated</li>
- *   <li>Queries are scoped to the correct schema</li>
- *   <li>Cross-tenant data access is prevented</li>
- *   <li>RLS policies are enforced (if enabled)</li>
- * </ul>
- *
- * <p>Uses Testcontainers for PostgreSQL to test real database behavior.
- */
 @SpringBootTest
 @ActiveProfiles("test")
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@RequiresDocker("Requires Docker + PostgreSQL for tenant isolation tests")
 class TenantIsolationIntegrationTest {
 
     @Container
@@ -48,8 +38,11 @@ class TenantIsolationIntegrationTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.flyway.enabled", () -> "false");
+        // S3/S9: esta clase prueba el modelo REAL de aislamiento — el wrapper
+        // TenantAwareDataSource debe estar activo (el profile test lo apaga).
+        registry.add("wms.tenant.isolation.enabled", () -> "true");
     }
 
     @Autowired
@@ -78,7 +71,7 @@ class TenantIsolationIntegrationTest {
 
     @Nested
     @DisplayName("Schema Creation Tests")
-    @TestMethodOrder(OrderAnnotation.class)
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     class SchemaCreationTests {
 
         @Test
@@ -108,87 +101,78 @@ class TenantIsolationIntegrationTest {
             jdbcTemplate.execute(String.format(
                     "CREATE TABLE %s.test_table (id SERIAL PRIMARY KEY, data TEXT)", schemaName));
 
-            // THEN
+            // THEN - schemaName ya contiene el nombre correcto
             Boolean tableExists = jdbcTemplate.queryForObject(
                     String.format("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '%s' AND table_name = 'test_table')",
-                            schemaName.replace("tenant_", "")),
+                            schemaName),
                     Boolean.class);
             assertTrue(tableExists);
         }
     }
 
     @Nested
-    @DisplayName("Isolation Tests")
-    @TestMethodOrder(OrderAnnotation.class)
+    @DisplayName("Isolation Tests (S1/S2 — modelo TenantAwareDataSource)")
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     class IsolationTests {
 
         @Test
         @Order(3)
-        @DisplayName("Tenant A no puede ver datos de Tenant B")
+        @DisplayName("S1: cada tenant solo ve sus datos; interleaved sin contaminación")
         void tenantACannotSeeTenantBData() {
-            // GIVEN
+            // GIVEN — ambos schemas con datos (helper crea inventory_item en cada uno)
             setupTenantsWithData();
 
-            // WHEN - Tenant A accede a su schema
+            // WHEN/THEN — SIN SET manual: el wrapper aplica search_path al hacer
+            // checkout de cada conexión de la conexión real del JdbcTemplate
             TenantContext.setTenantId(TENANT_A);
-            jdbcTemplate.execute("SET search_path TO " + TENANT_A_SCHEMA);
+            assertEquals(2, countInventoryItems());
 
-            // THEN - Solo ve datos de Tenant A
-            Integer tenantACount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM inventory_item",
-                    Integer.class);
-            assertEquals(2, tenantACount);
+            TenantContext.setTenantId(TENANT_B);
+            assertEquals(3, countInventoryItems());
 
-            // WHEN - Verificamos que no ve datos de Tenant B
-            String searchPath = schemaIsolationValidator.getCurrentSearchPath();
-            assertTrue(searchPath.contains(TENANT_A_SCHEMA));
+            // Interleaved: volver a A no hereda nada de B (pool sin fugas)
+            TenantContext.setTenantId(TENANT_A);
+            assertEquals(2, countInventoryItems());
 
-            // Cleanup
-            jdbcTemplate.execute("RESET search_path");
+            TenantContext.setTenantId(TENANT_B);
+            assertEquals(3, countInventoryItems());
         }
 
         @Test
         @Order(4)
-        @DisplayName("Cada tenant solo accede a su propio schema")
-        void eachTenantOnlyAccessesOwnSchema() {
-            // GIVEN - Ambos tenants con datos
-            setupTenantsWithData();
+        @DisplayName("S2: schema inexistente → TenantSchemaMissingException (fail-closed, cero filas)")
+        void missingSchemaFailsClosed() {
+            // GIVEN — tenant sin schema provisionado
+            TenantContext.setTenantId("ghost_tenant");
 
-            // WHEN - Tenant B configura su contexto
-            TenantContext.setTenantId(TENANT_B);
-            jdbcTemplate.execute("SET search_path TO " + TENANT_B_SCHEMA);
-
-            // THEN
-            Integer tenantBCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM inventory_item",
-                    Integer.class);
-            assertEquals(3, tenantBCount); // Tenant B tiene 3 items
-
-            // Cleanup
-            jdbcTemplate.execute("RESET search_path");
+            // WHEN/THEN — la query revienta; nunca sirve filas de public
+            assertThrows(TenantSchemaMissingException.class,
+                    () -> jdbcTemplate.queryForObject("SELECT COUNT(*) FROM inventory_item", Integer.class));
         }
 
         @Test
         @Order(5)
-        @DisplayName("Raw SQL query respeta aislamiento de schema")
-        void rawSqlQueryRespectsIsolation() {
+        @DisplayName("S1: la conexión real tiene el search_path del tenant y filtra raw SQL")
+        void searchPathAppliedOnRealConnection() {
             // GIVEN
             setupTenantsWithData();
 
-            // WHEN - Ejecutamos query raw como Tenant A
+            // WHEN — SHOW search_path via la MISMA conexión que ejecuta la query
             TenantContext.setTenantId(TENANT_A);
-            jdbcTemplate.execute("SET search_path TO " + TENANT_A_SCHEMA);
+            String searchPath = jdbcTemplate.queryForObject("SHOW search_path", String.class);
 
-            // Ejecutamos query raw
-            Integer count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM inventory_item WHERE status = 'AVAILABLE'",
-                    Integer.class);
+            // THEN — search_path resuelve el schema del tenant, sin public
+            assertTrue(searchPath.contains(TENANT_A_SCHEMA),
+                    "search_path debe contener " + TENANT_A_SCHEMA + " pero era: " + searchPath);
 
-            // THEN
-            assertEquals(2, count); // Solo items AVAILABLE de Tenant A
+            // Raw SQL con filtro: solo filas AVAILABLE del tenant A (2 de 2; B tiene 2 AVAILABLE de 3)
+            Integer available = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM inventory_item WHERE status = 'AVAILABLE'", Integer.class);
+            assertEquals(2, available);
+        }
 
-            // Cleanup
-            jdbcTemplate.execute("RESET search_path");
+        private Integer countInventoryItems() {
+            return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM inventory_item", Integer.class);
         }
     }
 
@@ -305,19 +289,23 @@ class TenantIsolationIntegrationTest {
 
     /**
      * Creates test schemas and populates them with test data.
+     * Idempotente: TRUNCATE antes de sembrar — varios tests llaman a este helper
+     * y los INSERT acumulaban filas (expected 2 AVAILABLE, got 4).
      */
     private void setupTenantsWithData() {
         // Create schemas
         tenantSchemaManager.createSchema(TENANT_A);
         tenantSchemaManager.createSchema(TENANT_B);
 
-        // Create tables in each schema
+        // Create tables in each schema (fresh state)
         jdbcTemplate.execute(String.format(
                 "CREATE TABLE IF NOT EXISTS %s.inventory_item (id SERIAL PRIMARY KEY, sku TEXT, status TEXT, quantity NUMERIC)",
                 TENANT_A_SCHEMA));
         jdbcTemplate.execute(String.format(
                 "CREATE TABLE IF NOT EXISTS %s.inventory_item (id SERIAL PRIMARY KEY, sku TEXT, status TEXT, quantity NUMERIC)",
                 TENANT_B_SCHEMA));
+        jdbcTemplate.execute(String.format("TRUNCATE TABLE %s.inventory_item", TENANT_A_SCHEMA));
+        jdbcTemplate.execute(String.format("TRUNCATE TABLE %s.inventory_item", TENANT_B_SCHEMA));
 
         // Insert test data for Tenant A
         jdbcTemplate.execute(String.format(

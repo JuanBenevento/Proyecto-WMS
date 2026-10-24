@@ -70,7 +70,7 @@ import { FooterComponent } from '../../../../core/layout/components/footer/foote
         </form>
 
         <div class="mt-8 text-center text-[10px] text-slate-400">
-          &copy; 2026 WMS System. V1.0 Hexagonal.
+          &copy; 2026 WMS System. V1.0
         </div>
       </div>
     </div>

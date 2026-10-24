@@ -51,7 +51,7 @@ class FefoAllocationStrategyTest {
             List<LotAllocation> result = strategy.selectLots("TOMATE-001", new BigDecimal("50"), context);
 
             assertThat(result).isNotEmpty();
-            assertThat(result.get(0).isNotNull();
+            assertThat(result.get(0)).isNotNull();
         }
 
         @Test

@@ -1,6 +1,7 @@
 package com.juanbenevento.wms.inventory.infrastructure.in.rest;
 
 import com.juanbenevento.wms.inventory.application.*;
+import com.juanbenevento.wms.inventory.application.RegisterReceiptService;
 import com.juanbenevento.wms.inventory.application.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

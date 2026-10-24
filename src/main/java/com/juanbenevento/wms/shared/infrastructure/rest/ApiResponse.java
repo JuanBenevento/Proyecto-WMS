@@ -99,7 +99,7 @@ public record ApiResponse<T>(
             .data(data)
             .success(true)
             .timestamp(now())
-            .meta(pagination)
+            .meta(Meta.builder().pagination(pagination).build())
             .build();
     }
     

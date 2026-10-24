@@ -1,14 +1,11 @@
 name: WMS CI/CD Pipeline 🚀
 
 # DISABLED - Usar solo maven.yml para evitar conflictos
-# habilitar cuando este listo para produccion
-
-# on:
-#   push:
-#     branches: [dev, main]
-#   pull_request:
-#     branches: [main]
-#   workflow_dispatch:
+# habilitar cuando este listo para produccion.
+# NOTA: comentar `on:` deja el workflow INVÁLIDO — GitHub lo ejecuta como
+# "failure" con 0 jobs en cada push (rojo permanente). Solo workflow_dispatch.
+on:
+  workflow_dispatch:
 
 env:
   JAVA_VERSION: '21'

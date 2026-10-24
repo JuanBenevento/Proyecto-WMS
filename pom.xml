@@ -17,6 +17,15 @@
 	<description>Demo project for Spring Boot</description>
 	<properties>
 		<java.version>21</java.version>
+		<!--
+			Sobreescribe la versión gestionada por spring-boot-dependencies 3.4.1 (1.20.4).
+			1.20.4 usa un docker-java que negocia API Docker 1.52, incompatible con el
+			daemon del runner de GitHub Actions (API 1.48) → "client version 1.52 is too
+			new. Maximum supported API version is 1.48". Alineamos a la línea 1.21.3
+			consistente con org.testcontainers:postgresql y junit-jupiter declarados abajo.
+			Verificar tras cualquier bump de Spring Boot, que reintroducirá su versión.
+		-->
+		<testcontainers.version>1.21.3</testcontainers.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -117,10 +126,6 @@
 			<artifactId>resilience4j-spring-boot3</artifactId>
 			<version>2.2.0</version>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-aop</artifactId>
-		</dependency>
 		
 		<!-- ========================================================================
 			Performance: Caching
@@ -142,17 +147,16 @@
 		</dependency>
 		-->
 		
-		<!-- Testcontainers for integration testing -->
+		<!-- Testcontainers for integration testing.
+		     Las versiones las gobierna la property testcontainers.version (BOM override). -->
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>postgresql</artifactId>
-			<version>1.19.7</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>testcontainers-junit-jupiter</artifactId>
-			<version>2.0.2</version>
+			<artifactId>junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -195,17 +199,8 @@
 					</excludes>
 				</configuration>
 			</plugin>
-			<!-- Excluir tests de integración con Testcontainers por defecto -->
-			<!-- Usar mvn test -Pci para ejecutar todos los tests incluyendo integración -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<configuration>
-					<excludes>
-						<exclude>**/IdempotencyIntegrationTest.java</exclude>
-					</excludes>
-				</configuration>
-			</plugin>
+			<!-- Tests de integración se ejecutan por defecto con Testcontainers -->
+			<!-- Flyway está habilitado en el profile test para ejecutar migraciones reales -->
 		</plugins>
 	</build>
 </project>

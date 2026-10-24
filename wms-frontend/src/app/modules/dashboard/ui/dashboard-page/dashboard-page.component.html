@@ -1,0 +1,158 @@
+<!-- Dashboard Page Component Template -->
+
+<div class="dashboard-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">Resumen de KPIs y métricas del sistema</p>
+    </div>
+    <button class="btn-refresh" (click)="refresh()" [disabled]="loading">
+      <span *ngIf="!loading">Actualizar</span>
+      <span *ngIf="loading">Cargando...</span>
+    </button>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="error-state">
+    <p>Error al cargar los KPIs. Intenta de nuevo.</p>
+    <button class="btn-retry" (click)="refresh()">Reintentar</button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && !error" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando métricas...</p>
+  </div>
+
+  <!-- KPI Cards -->
+  <div *ngIf="!loading && !error && kpis" class="kpi-grid">
+    
+    <!-- Total Orders -->
+    <div class="kpi-card">
+      <div class="kpi-icon orders-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpis.orders.total }}</span>
+        <span class="kpi-label">Total Pedidos</span>
+      </div>
+    </div>
+
+    <!-- Pending Orders -->
+    <div class="kpi-card">
+      <div class="kpi-icon pending-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpis.orders.pending }}</span>
+        <span class="kpi-label">Pendientes</span>
+      </div>
+    </div>
+
+    <!-- In Progress Orders -->
+    <div class="kpi-card">
+      <div class="kpi-icon progress-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="20" x2="12" y2="10"></line>
+          <line x1="18" y1="20" x2="18" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="16"></line>
+        </svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpis.orders.inProgress }}</span>
+        <span class="kpi-label">En Proceso</span>
+      </div>
+      <div class="kpi-percent">{{ inProgressPercent }}%</div>
+    </div>
+
+    <!-- Completed Orders -->
+    <div class="kpi-card">
+      <div class="kpi-icon completed-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpis.orders.completed }}</span>
+        <span class="kpi-label">Completados</span>
+      </div>
+      <div class="kpi-percent success">{{ completionPercent }}%</div>
+    </div>
+
+    <!-- Total Locations -->
+    <div class="kpi-card">
+      <div class="kpi-icon warehouse-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpis.warehouse.total }}</span>
+        <span class="kpi-label">Total Ubicaciones</span>
+      </div>
+    </div>
+
+    <!-- Used Locations -->
+    <div class="kpi-card">
+      <div class="kpi-icon used-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="9" y1="3" x2="9" y2="21"></line>
+        </svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpis.warehouse.used }}</span>
+        <span class="kpi-label">En Uso</span>
+      </div>
+    </div>
+
+    <!-- Available Locations -->
+    <div class="kpi-card">
+      <div class="kpi-icon available-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpis.warehouse.available }}</span>
+        <span class="kpi-label">Disponibles</span>
+      </div>
+    </div>
+
+    <!-- Utilization Rate (Large Card) -->
+    <div class="kpi-card-large">
+      <div class="kpi-header">
+        <span class="kpi-title">Utilización del Almacén</span>
+      </div>
+      <div class="kpi-progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="utilizationPercent"></div>
+        </div>
+        <div class="progress-labels">
+          <span>{{ utilizationPercent }}% utilizado</span>
+          <span>{{ kpis.warehouse.used }} / {{ kpis.warehouse.total }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Timestamp -->
+  <div *ngIf="kpis" class="timestamp">
+    Última actualización: {{ kpis.timestamp | date:'medium' }}
+  </div>
+
+</div>

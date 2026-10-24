@@ -1,6 +1,7 @@
 package com.juanbenevento.wms.monitoring.application.port.in;
 
 import com.juanbenevento.wms.monitoring.application.port.in.dto.TemperatureAlertDto;
+import com.juanbenevento.wms.monitoring.application.port.in.dto.TemperatureReadingDto;
 
 import java.time.LocalDateTime;
 import java.util.List;

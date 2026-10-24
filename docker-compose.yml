@@ -57,22 +57,26 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
       SPRING_FLYWAY_BASELINE-ON-MIGRATE: "true"
       # Security
-      JWT_SECRET_KEY: wms-jwt-secret-key-for-local-dev-only-change-in-production-min-256bits
+      # JWT_SECRET_KEY debe ser Base64 válido de >=32 bytes (JwtService lo decodifica en @PostConstruct).
+      # Este valor es solo para DEV LOCAL: base64("dev-only-jwt-secret-key-32bytes!").
+      JWT_SECRET_KEY: ZGV2LW9ubHktand0LXNlY3JldC1rZXktMzJieXRlcyE=
       JWT_EXPIRATION: "86400000"
       # Server
       SERVER_PORT: "8080"
       # Actuator
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics
-      # Multi-tenant schema isolation (disabled for local dev, enable in prod)
-      WMS_TENANT_ISOLATION_ENABLED: "false"
-      WMS_TENANT_RLS_ENABLED: "false"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "always"
+      # Multi-tenant schema isolation (S1/S2): ACTIVADO — el dev local corre el camino real.
+      # Si se desactiva, /actuator/health queda DOWN a propósito (garantía de aislamiento ausente).
+      WMS_TENANT_ISOLATION_ENABLED: "true"
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      # wget (busybox) porque la imagen runtime alpine NO trae curl
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -97,7 +101,9 @@ services:
     depends_on:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1"]
+      # 127.0.0.1 en vez de localhost: busybox wget resuelve ::1 (IPv6) primero
+      # y nginx solo escucha en IPv4 -> "Connection refused" permanente.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

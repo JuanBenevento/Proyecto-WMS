@@ -15,6 +15,8 @@ import java.util.Map;
 /**
  * Global exception handler for REST API.
  * Converts all exceptions to standardized ApiResponse format.
+ * 
+ * IMPORTANT: Always log the ROOT CAUSE, not just the surface exception.
  */
 @RestControllerAdvice
 @Slf4j
@@ -27,19 +29,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDomainException(DomainException ex) {
         log.warn("Domain exception: {}", ex.getMessage());
         
-        HttpStatus status = switch (ex.getType()) {
-            case NOT_FOUND -> HttpStatus.NOT_FOUND;
-            case VALIDATION -> HttpStatus.BAD_REQUEST;
-            case CONFLICT -> HttpStatus.CONFLICT;
-            case BUSINESS_RULE -> HttpStatus.UNPROCESSABLE_ENTITY;
-            case UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;
-            case FORBIDDEN -> HttpStatus.FORBIDDEN;
-            default -> HttpStatus.INTERNAL_SERVER_ERROR;
-        };
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        String errorCode = "DOMAIN_ERROR";
         
         return ResponseEntity
             .status(status)
-            .body(ApiResponse.error(ex.getMessage(), ex.getType().name()));
+            .body(ApiResponse.error(ex.getMessage(), errorCode));
     }
 
     /**
@@ -107,14 +102,76 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle all other uncaught exceptions.
+     * Handle DataAccessException specifically with better messages.
      */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
-        log.error("Unexpected error", ex);
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataAccess(
+            org.springframework.dao.DataAccessException ex) {
+        
+        // Get root cause
+        Throwable root = getRootCause(ex);
+        String userMessage = "Error de base de datos";
+        
+        // Provide specific messages based on root cause
+        if (root instanceof org.hibernate.exception.ConstraintViolationException) {
+            userMessage = "Violación de restricción: el dato ya existe o viola una regla de negocio";
+        } else if (root.getMessage() != null && root.getMessage().contains("tenant")) {
+            userMessage = "Error de configuración de tenant. Contacte al administrador.";
+        } else if (root instanceof java.sql.SQLException) {
+            userMessage = "Error de base de datos: " + root.getMessage();
+        } else {
+            userMessage = "Error de base de datos: " + root.getMessage();
+        }
+        
+        // Log con detalle para el desarrollador
+        log.error("DataAccessException - User seeing: {} - Full error:", userMessage, ex);
         
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.serverError("An unexpected error occurred"));
+            .body(ApiResponse.error(userMessage, "DB_ERROR"));
+    }
+
+    /**
+     * Handle all other uncaught exceptions - with ROOT CAUSE logging.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+        // Get root cause for better message
+        Throwable root = getRootCause(ex);
+        String rootMessage = root.getMessage();
+        
+        if (rootMessage == null || rootMessage.isBlank()) {
+            rootMessage = root.getClass().getSimpleName();
+        }
+        
+        // Log THE ROOT CAUSE, not the wrapper
+        log.error("Unhandled exception. Root cause: {} (of type: {})", 
+                   rootMessage, root.getClass().getSimpleName(), ex);
+        
+        // User-friendly message
+        String userMessage = "Error interno del servidor. Details: " + rootMessage;
+        
+        // Check for specific common errors
+        if (root instanceof IllegalStateException) {
+            userMessage = "Estado inválido: " + rootMessage;
+        } else if (root instanceof IllegalArgumentException) {
+            userMessage = "Datos inválidos: " + rootMessage;
+        } else if (root instanceof NullPointerException) {
+            userMessage = "Error de configuración. Faltan datos requeridos.";
+        }
+        
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ApiResponse.error(userMessage, "INTERNAL_ERROR"));
+    }
+    
+    /**
+     * Helper to get the actual root cause of an exception.
+     */
+    private Throwable getRootCause(Throwable ex) {
+        while (ex.getCause() != null && ex.getCause() != ex) {
+            ex = ex.getCause();
+        }
+        return ex;
     }
 }
